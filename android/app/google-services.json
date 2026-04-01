@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "813726594897",
+    "project_id": "smallbizaccounts-7b0eb",
+    "storage_bucket": "smallbizaccounts-7b0eb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813726594897:android:820a6f62a84ad0d0f7c570",
+        "android_client_info": {
+          "package_name": "com.example.smallbiz_accounts"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "813726594897-t2jl6ag7rdeguqhgbuldce7i22rsin1n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.smallbiz_accounts",
+            "certificate_hash": "eb6ec3f929e6b445f16e0acebe948d91096df9a3"
+          }
+        },
+        {
+          "client_id": "813726594897-2n0u43u800cpiplhnai0elsq2qktu78d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAn5O2RR3UXtOVz7aY3eGUvUdOjSecIlfo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "813726594897-2n0u43u800cpiplhnai0elsq2qktu78d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
