@@ -9,8 +9,11 @@ class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+<<<<<<< HEAD
     final userProvider = Provider.of<UserProvider>(context);
 
+=======
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
     return Scaffold(
       body: SafeArea(
         child: Container(
@@ -37,7 +40,11 @@ class WelcomeScreen extends StatelessWidget {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
+<<<<<<< HEAD
                       color: Colors.white.withAlpha(25),
+=======
+                      color: Colors.white.withValues(alpha: 0.1),
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -64,12 +71,17 @@ class WelcomeScreen extends StatelessWidget {
                   'Effortless expense & income tracking for your small business. Built for Sri Lankan shop owners.',
                   style: TextStyle(
                     fontSize: 16,
+<<<<<<< HEAD
                     color: Colors.white.withAlpha(204),
+=======
+                    color: Colors.white.withValues(alpha: 0.8),
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
                     height: 1.5,
                   ),
                 ),
                 const Spacer(flex: 1),
                 // Google Sign In Button
+<<<<<<< HEAD
                 if (userProvider.isLoading)
                   const Center(child: CircularProgressIndicator(color: Colors.white))
                 else ...[
@@ -95,6 +107,32 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+=======
+                _buildGoogleSignInButton(context),
+                const SizedBox(height: 12),
+                // Email Sign In Button
+                _buildEmailSignInButton(context),
+                const SizedBox(height: 12),
+                // Continue without sign in
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const BasicInfoScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Continue without sign in',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.normal,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
                 const SizedBox(height: 24),
                 // Footer
                 Center(
@@ -102,7 +140,11 @@ class WelcomeScreen extends StatelessWidget {
                     '© 2025 SmallBiz Accounts | Privacy Policy',
                     style: TextStyle(
                       fontSize: 12,
+<<<<<<< HEAD
                       color: Colors.white.withAlpha(128),
+=======
+                      color: Colors.white.withValues(alpha: 0.5),
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
                     ),
                   ),
                 ),
@@ -115,7 +157,11 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
+<<<<<<< HEAD
   Widget _buildGoogleSignInButton(BuildContext context, UserProvider userProvider) {
+=======
+  Widget _buildGoogleSignInButton(BuildContext context) {
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
     return Container(
       width: double.infinity,
       height: 56,
@@ -124,7 +170,11 @@ class WelcomeScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
+<<<<<<< HEAD
             color: Colors.black.withAlpha(25),
+=======
+            color: Colors.black.withValues(alpha: 0.1),
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -133,6 +183,7 @@ class WelcomeScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
+<<<<<<< HEAD
           onTap: () async {
             await userProvider.signInWithGoogle();
             if (userProvider.user == null && context.mounted) {
@@ -147,13 +198,56 @@ class WelcomeScreen extends StatelessWidget {
           },
           borderRadius: BorderRadius.circular(16),
           child: const Center(
+=======
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Google Sign In coming soon'),
+                duration: Duration(seconds: 1),
+                backgroundColor: AppColors.primary,
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Center(
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
+<<<<<<< HEAD
                 Icon(Icons.login, color: Color(0xFF4285F4)),
                 SizedBox(width: 12),
                 Text(
+=======
+                // Google "G" using Material Icon with custom styling
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.2),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'G',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4285F4),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
                   'Continue with Google',
                   style: TextStyle(
                     fontSize: 16,
@@ -168,4 +262,36 @@ class WelcomeScreen extends StatelessWidget {
       ),
     );
   }
+<<<<<<< HEAD
+=======
+
+  Widget _buildEmailSignInButton(BuildContext context) {
+    return OutlinedButton(
+      onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email Sign In coming soon'),
+            duration: Duration(seconds: 1),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      },
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 56),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      child: const Text(
+        'Continue with Email',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
 }

@@ -129,7 +129,11 @@ class _BusinessNameScreenState extends State<BusinessNameScreen> {
       );
 
       final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+<<<<<<< HEAD
       await categoryProvider.loadCategories(); // UPDATED THIS
+=======
+      await categoryProvider.ensureDefaultCategories();
+>>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
 
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
