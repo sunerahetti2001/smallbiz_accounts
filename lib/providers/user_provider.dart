@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/sqlite_service.dart';
 import '../services/auth_service.dart';
-=======
-import '../models/user_model.dart';
-import '../services/mock_database.dart';
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
 
 class UserProvider with ChangeNotifier {
   UserModel? _user;
@@ -17,13 +13,11 @@ class UserProvider with ChangeNotifier {
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   bool get isOnboarded => _user != null;
+  bool get isGuest => _user != null && (_user!.id.startsWith('guest_') || _user!.email == null);
 
-<<<<<<< HEAD
   final SqliteService _sqlite = SqliteService();
   final AuthService _auth = AuthService();
-=======
-  final MockDatabase _db = MockDatabase();
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
+  static const String _lastUserIdKey = 'last_user_id';
 
   Future<void> loadUser() async {
     if (_isInitialized) return;
@@ -32,21 +26,27 @@ class UserProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-<<<<<<< HEAD
-      // First, check if Firebase has a user
+      final prefs = await SharedPreferences.getInstance();
+      final lastUserId = prefs.getString(_lastUserIdKey);
+      
       final firebaseUser = _auth.currentUser;
+      
       if (firebaseUser != null) {
-        // Try to load cached user from SQLite
-        _user = await _sqlite.getUser();
+        // Authenticated user
+        _user = await _sqlite.getUser(id: firebaseUser.uid);
+        if (_user != null) {
+          await prefs.setString(_lastUserIdKey, firebaseUser.uid);
+        }
+      } else if (lastUserId != null && lastUserId.startsWith('guest_')) {
+        // Guest user auto-login
+        _user = await _sqlite.getUser(id: lastUserId);
       } else {
         _user = null;
       }
-=======
-      _user = await _db.getUser();
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
+      
       _isInitialized = true;
     } catch (e) {
-      print('Error loading user: $e');
+      debugPrint('Error loading user: $e');
       _user = null;
     } finally {
       _isLoading = false;
@@ -54,7 +54,6 @@ class UserProvider with ChangeNotifier {
     }
   }
 
-<<<<<<< HEAD
   Future<void> signInWithGoogle() async {
     _isLoading = true;
     notifyListeners();
@@ -62,23 +61,59 @@ class UserProvider with ChangeNotifier {
     try {
       final credential = await _auth.signInWithGoogle();
       if (credential != null && credential.user != null) {
-        // Check if we already have this user in SQLite
-        _user = await _sqlite.getUser();
-        if (_user == null) {
-          // If no user in SQLite, we might need to go to onboarding
-          // This will be handled by the UI based on isOnboarded
+        _user = await _sqlite.getUser(id: credential.user!.uid);
+        if (_user != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_lastUserIdKey, credential.user!.uid);
         }
       }
     } catch (e) {
-      print('Error during Google Sign In: $e');
+      debugPrint('Error during Google Sign In: $e');
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-=======
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
+  Future<void> signInWithEmail(String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final credential = await _auth.signInWithEmail(email, password);
+      if (credential != null && credential.user != null) {
+        _user = await _sqlite.getUser(id: credential.user!.uid);
+        if (_user != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_lastUserIdKey, credential.user!.uid);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error during Email Sign In: $e');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> signUpWithEmail(String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _auth.signUpWithEmail(email, password);
+      _user = null; // Forces onboarding
+    } catch (e) {
+      debugPrint('Error during Email Sign Up: $e');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> createUser({
     required String name,
     String? email,
@@ -90,20 +125,13 @@ class UserProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-<<<<<<< HEAD
     final firebaseUser = _auth.currentUser;
-    final userId = firebaseUser?.uid ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final userId = firebaseUser?.uid ?? 'guest_${DateTime.now().millisecondsSinceEpoch}';
 
     final user = UserModel(
       id: userId,
       name: name,
       email: email ?? firebaseUser?.email,
-=======
-    final user = UserModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      email: email,
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
       businessName: businessName,
       currency: currency,
       openingBalance: openingBalance,
@@ -111,11 +139,11 @@ class UserProvider with ChangeNotifier {
       createdAt: DateTime.now(),
     );
 
-<<<<<<< HEAD
     await _sqlite.saveUser(user);
-=======
-    await _db.saveUser(user);
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastUserIdKey, userId);
+    
     _user = user;
     _isInitialized = true;
 
@@ -124,22 +152,22 @@ class UserProvider with ChangeNotifier {
   }
 
   Future<void> updateUser(UserModel updatedUser) async {
-<<<<<<< HEAD
     await _sqlite.saveUser(updatedUser);
-=======
-    await _db.saveUser(updatedUser);
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
     _user = updatedUser;
     notifyListeners();
   }
 
-<<<<<<< HEAD
-  Future<void> logout() async {
+  Future<void> logout({bool clearGuestData = false}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentUserId = _user?.id;
+    
+    if (clearGuestData && currentUserId != null && currentUserId.startsWith('guest_')) {
+      await _sqlite.clearUserData(currentUserId);
+    }
+    
     await _auth.signOut();
-    await _sqlite.deleteUser(); // Optional: clear local cache on logout
-=======
-  void logout() {
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
+    await prefs.remove(_lastUserIdKey);
+
     _user = null;
     _isInitialized = false;
     notifyListeners();

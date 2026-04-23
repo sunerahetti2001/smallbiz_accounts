@@ -5,8 +5,8 @@ import '../../models/transaction_model.dart';
 import '../../models/category_model.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/category_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../utils/colors.dart';
-import '../../widgets/gradient_background.dart';
 
 class IncomeScreen extends StatefulWidget {
   const IncomeScreen({super.key});
@@ -34,11 +34,10 @@ class _IncomeScreenState extends State<IncomeScreen> {
   }
 
   Future<void> _loadCategories() async {
-    final categoryProvider = Provider.of<CategoryProvider>(
-      context,
-      listen: false,
-    );
-    await categoryProvider.loadCategories();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userId = userProvider.user!.id;
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    await categoryProvider.loadCategories(userId);
 
     if (categoryProvider.incomeCategories.isNotEmpty) {
       setState(() {
@@ -52,204 +51,62 @@ class _IncomeScreenState extends State<IncomeScreen> {
     final categoryProvider = Provider.of<CategoryProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Income'),
-        backgroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Add Income')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Amount
-            const Text(
-              'Amount',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
+            const Text('Amount', style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextFormField(
               controller: _amountController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: '0.00',
-                prefixText: 'Rs ',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter amount';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                return null;
-              },
+              decoration: InputDecoration(hintText: '0.00', prefixText: 'Rs ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
+              validator: (value) => (value == null || value.isEmpty) ? 'Enter amount' : null,
             ),
             const SizedBox(height: 16),
-
-            // Category
-            const Text(
-              'Category',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
+            const Text('Category', style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(16),
-              ),
+              decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(16)),
               child: DropdownButton<CategoryModel>(
                 value: _selectedCategory,
                 isExpanded: true,
                 underline: const SizedBox(),
-                hint: const Text('Select category'),
-                items: categoryProvider.incomeCategories.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text('${category.icon} ${category.name}'),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                },
+                items: categoryProvider.incomeCategories.map((c) => DropdownMenuItem(value: c, child: Text('${c.icon} ${c.name}'))).toList(),
+                onChanged: (v) => setState(() => _selectedCategory = v),
               ),
             ),
             const SizedBox(height: 16),
-
-            // Description
-            const Text(
-              'Description',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
+            const Text('Description', style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'What is this income for?',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter description';
-                }
-                return null;
-              },
+              decoration: InputDecoration(hintText: 'Description', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
+              validator: (value) => (value == null || value.isEmpty) ? 'Enter description' : null,
             ),
             const SizedBox(height: 16),
-
-            // Payment Method
-            const Text(
-              'Payment Method',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 8),
+            const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.w500)),
             Row(
               children: _paymentMethods.map((method) {
                 return Expanded(
                   child: Row(
                     children: [
-                      Radio<String>(
-                        value: method,
-                        groupValue: _selectedPaymentMethod,
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedPaymentMethod = value!;
-                          });
-                        },
-                        activeColor: AppColors.primary,
-                      ),
+                      Radio<String>(value: method, groupValue: _selectedPaymentMethod, onChanged: (v) => setState(() => _selectedPaymentMethod = v!), activeColor: AppColors.primary),
                       Text(method),
                     ],
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
-
-            // Date
-            const Text(
-              'Date',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 8),
-            GestureDetector(
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                  builder: (context, child) {
-                    return Theme(
-                      data: Theme.of(context).copyWith(
-                        colorScheme: const ColorScheme.light(
-                          primary: AppColors.primary,
-                        ),
-                      ),
-                      child: child!,
-                    );
-                  },
-                );
-                if (date != null) {
-                  setState(() {
-                    _selectedDate = date;
-                  });
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today, color: AppColors.textSecondary),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
             const SizedBox(height: 32),
-
-            // Save Button
             ElevatedButton(
               onPressed: _isLoading ? null : _saveTransaction,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.income,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('SAVE TRANSACTION'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.income, padding: const EdgeInsets.symmetric(vertical: 16)),
+              child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('SAVE INCOME'),
             ),
           ],
         ),
@@ -259,11 +116,10 @@ class _IncomeScreenState extends State<IncomeScreen> {
 
   Future<void> _saveTransaction() async {
     if (_formKey.currentState!.validate() && _selectedCategory != null) {
-      setState(() {
-        _isLoading = true;
-      });
-
+      setState(() => _isLoading = true);
       try {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final userId = userProvider.user!.id;
         final transaction = TransactionModel(
           id: const Uuid().v4(),
           type: TransactionType.income,
@@ -273,42 +129,13 @@ class _IncomeScreenState extends State<IncomeScreen> {
           date: _selectedDate,
           paymentMethod: _selectedPaymentMethod,
         );
-
-        await Provider.of<TransactionProvider>(
-          context,
-          listen: false,
-        ).addTransaction(transaction);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Income added successfully!'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          Navigator.pop(context, true);
-        }
+        await Provider.of<TransactionProvider>(context, listen: false).addTransaction(transaction, userId);
+        if (mounted) Navigator.pop(context, true);
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
       } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        if (mounted) setState(() => _isLoading = false);
       }
-    } else if (_selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a category'),
-          backgroundColor: AppColors.error,
-        ),
-      );
     }
   }
 

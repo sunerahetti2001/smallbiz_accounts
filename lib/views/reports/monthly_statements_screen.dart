@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../models/transaction_model.dart';
@@ -29,12 +30,15 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
       _isLoading = true;
     });
 
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final transactionProvider = Provider.of<TransactionProvider>(
       context,
       listen: false,
     );
 
-    await transactionProvider.loadTransactions();
+    if (userProvider.user != null) {
+      await transactionProvider.loadTransactions(userProvider.user!.id);
+    }
     final allTransactions = transactionProvider.transactions;
 
     Map<String, Map<String, dynamic>> monthlyData = {};
@@ -165,7 +169,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                         'Generate and download financial statements',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -195,7 +199,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: const Icon(
@@ -221,7 +225,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                                     'Create a new financial statement',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.white.withOpacity(0.8),
+                                      color: Colors.white.withValues(alpha: 0.8),
                                     ),
                                   ),
                                 ],
@@ -297,7 +301,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Center(
@@ -337,8 +341,8 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: isProfit
-                          ? AppColors.success.withOpacity(0.1)
-                          : AppColors.error.withOpacity(0.1),
+                          ? AppColors.success.withValues(alpha: 0.1)
+                          : AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -379,7 +383,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: (statement['income'] / (statement['income'] + statement['expense'])).clamp(0.0, 1.0),
-                  backgroundColor: AppColors.expense.withOpacity(0.3),
+                  backgroundColor: AppColors.expense.withValues(alpha: 0.3),
                   color: AppColors.income,
                   minHeight: 6,
                 ),
@@ -480,7 +484,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.description,
                       color: AppColors.primary,
                       size: 28,
@@ -529,7 +533,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                             const SizedBox(height: 4),
                             Text(
                               CurrencyFormatter.formatLKR(totalIncome),
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.income),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.income),
                             ),
                           ],
                         ),
@@ -546,7 +550,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                             const SizedBox(height: 4),
                             Text(
                               CurrencyFormatter.formatLKR(totalExpense),
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.expense),
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.expense),
                             ),
                           ],
                         ),

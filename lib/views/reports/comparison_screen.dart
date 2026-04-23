@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../models/transaction_model.dart';
@@ -24,7 +25,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
   double _lastMonthExpense = 0;
   double _lastMonthCredit = 0;
 
-  DateTime _today = DateTime.now();
+  final DateTime _today = DateTime.now();
 
   @override
   void initState() {
@@ -37,13 +38,24 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       _isLoading = true;
     });
 
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final transactionProvider = Provider.of<TransactionProvider>(
       context,
       listen: false,
     );
 
-    await transactionProvider.loadTransactions();
+    if (userProvider.user != null) {
+      await transactionProvider.loadTransactions(userProvider.user!.id);
+    }
+    
     final allTransactions = transactionProvider.transactions;
+
+    _thisMonthIncome = 0;
+    _thisMonthExpense = 0;
+    _thisMonthCredit = 0;
+    _lastMonthIncome = 0;
+    _lastMonthExpense = 0;
+    _lastMonthCredit = 0;
 
     DateTime thisMonthStart = DateTime(_today.year, _today.month, 1);
     DateTime lastMonthStart = DateTime(_today.year, _today.month - 1, 1);
@@ -178,7 +190,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                         'Month-to-month financial comparison',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -197,7 +209,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.05),
+                            color: AppColors.primary.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Column(
@@ -210,7 +222,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
+                              const Text(
                                 'Current Month',
                                 style: TextStyle(
                                   fontSize: 12,
@@ -239,7 +251,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
+                              const Text(
                                 'Previous Month',
                                 style: TextStyle(
                                   fontSize: 12,
@@ -386,7 +398,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: color.withOpacity(0.1),
+                  backgroundColor: color.withValues(alpha: 0.1),
                   child: Icon(icon, color: color, size: 24),
                 ),
                 const SizedBox(width: 12),
@@ -402,8 +414,8 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: isGoodChange
-                        ? AppColors.success.withOpacity(0.1)
-                        : AppColors.error.withOpacity(0.1),
+                        ? AppColors.success.withValues(alpha: 0.1)
+                        : AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(

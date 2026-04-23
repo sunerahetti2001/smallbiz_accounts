@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../models/transaction_model.dart';
@@ -29,12 +30,15 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
       _isLoading = true;
     });
 
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
     final transactionProvider = Provider.of<TransactionProvider>(
       context,
       listen: false,
     );
 
-    await transactionProvider.loadTransactions();
+    if (userProvider.user != null) {
+      await transactionProvider.loadTransactions(userProvider.user!.id);
+    }
     final allTransactions = transactionProvider.transactions;
 
     DateTime today = DateTime.now();
@@ -195,7 +199,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                         'Last 3 months performance review',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
                     ],
@@ -215,7 +219,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                         child: StatCard(
                           title: 'Total Income',
                           value: totalIncome,
-                          icon: Icons.trending_down,
+                          icon: Icons.trending_up,
                           color: AppColors.income,
                           isCompact: true,
                         ),
@@ -225,7 +229,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                         child: StatCard(
                           title: 'Total Expense',
                           value: totalExpense,
-                          icon: Icons.trending_up,
+                          icon: Icons.trending_down,
                           color: AppColors.expense,
                           isCompact: true,
                         ),
@@ -298,7 +302,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -314,8 +318,8 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: isProfit
-                        ? AppColors.success.withOpacity(0.1)
-                        : AppColors.error.withOpacity(0.1),
+                        ? AppColors.success.withValues(alpha: 0.1)
+                        : AppColors.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -418,7 +422,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.receipt, size: 16, color: AppColors.credit),
+                  const Icon(Icons.receipt, size: 16, color: AppColors.credit),
                   const SizedBox(width: 8),
                   Text(
                     'Credit Outstanding: ',
@@ -429,7 +433,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                   ),
                   Text(
                     CurrencyFormatter.formatLKR(credit),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: AppColors.credit,
@@ -443,7 +447,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: (income / (income + expense)).clamp(0.0, 1.0),
-                backgroundColor: AppColors.expense.withOpacity(0.3),
+                backgroundColor: AppColors.expense.withValues(alpha: 0.3),
                 color: AppColors.income,
                 minHeight: 6,
               ),

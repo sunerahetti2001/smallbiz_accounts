@@ -13,7 +13,6 @@ dependencies:
   # State Management
   provider: ^6.1.1
 
-<<<<<<< HEAD
   # Local Storage (SQLite)
   sqflite: ^2.3.0
   path: ^1.8.3
@@ -26,22 +25,11 @@ dependencies:
   # Utilities
   shared_preferences: ^2.2.2
   uuid: ^4.3.3
-=======
-  # Storage
-  shared_preferences: ^2.2.2
-  uuid: ^4.3.3
-
-  # Utilities
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
   intl: ^0.18.1
 
   # UI
   flutter_svg: ^2.0.9
-<<<<<<< HEAD
   google_fonts: ^6.1.0
-=======
-  google_fonts: ^6.1.0  # ADD THIS
->>>>>>> 04dddb84a6e13f1f04626f80d1dc7887fec4c35a
 
 dev_dependencies:
   flutter_test:
