@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../models/transaction_model.dart';
 import '../models/category_model.dart';
 import '../models/user_model.dart';
@@ -19,77 +22,78 @@ class SqliteService {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'smallbiz_accounts.db');
+    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    String path = join(documentsDirectory.path, 'smallbiz_accounts.db');
     return await openDatabase(
       path,
-      version: 2, // Upgraded version to add userId columns
+      version: 2,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE categories (
-        id TEXT PRIMARY KEY,
-        userId TEXT NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        icon TEXT NOT NULL,
-        isDefault INTEGER NOT NULL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE transactions (
-        id TEXT PRIMARY KEY,
-        userId TEXT NOT NULL,
-        type TEXT NOT NULL,
-        amount REAL NOT NULL,
-        category TEXT NOT NULL,
-        description TEXT NOT NULL,
-        date TEXT NOT NULL,
-        paymentMethod TEXT,
-        customerName TEXT,
-        customerMobile TEXT,
-        items TEXT,
-        isPaid INTEGER NOT NULL,
-        dueDate TEXT
-      )
-    ''');
-
+    // Users table
     await db.execute('''
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         email TEXT,
-        businessName TEXT NOT NULL,
+        business_name TEXT NOT NULL,
         currency TEXT NOT NULL,
-        openingBalance REAL NOT NULL,
-        accountType TEXT NOT NULL,
-        createdAt TEXT NOT NULL
+        opening_balance REAL NOT NULL,
+        account_type TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // Transactions table
+    await db.execute('''
+      CREATE TABLE transactions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        date TEXT NOT NULL,
+        payment_method TEXT,
+        customer_name TEXT,
+        customer_mobile TEXT,
+        items TEXT,
+        is_paid INTEGER NOT NULL DEFAULT 0,
+        due_date TEXT
+      )
+    ''');
+
+    // Categories table
+    await db.execute('''
+      CREATE TABLE categories (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        icon TEXT NOT NULL,
+        is_default INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Very basic migration: just drop and recreate for now or add column
-      // Since it's dev, dropping is easier but adding column is better.
+      // Add user_id column to existing tables
       try {
-        await db.execute('ALTER TABLE transactions ADD COLUMN userId TEXT DEFAULT "legacy"');
-        await db.execute('ALTER TABLE categories ADD COLUMN userId TEXT DEFAULT "legacy"');
+        await db.execute('ALTER TABLE transactions ADD COLUMN user_id TEXT DEFAULT "legacy"');
+        await db.execute('ALTER TABLE categories ADD COLUMN user_id TEXT DEFAULT "legacy"');
       } catch (e) {
-        // Fallback: drop and recreate
-        await db.execute('DROP TABLE IF EXISTS transactions');
-        await db.execute('DROP TABLE IF EXISTS categories');
-        await db.execute('DROP TABLE IF EXISTS users');
-        await _onCreate(db, newVersion);
+        // If columns already exist, ignore
+        debugPrint('Migration warning: $e');
       }
     }
   }
 
-  // User Operations
+  // ==================== USER OPERATIONS ====================
+
   Future<void> saveUser(UserModel user) async {
     final db = await database;
     await db.insert(
@@ -98,11 +102,11 @@ class SqliteService {
         'id': user.id,
         'name': user.name,
         'email': user.email,
-        'businessName': user.businessName,
+        'business_name': user.businessName,
         'currency': user.currency,
-        'openingBalance': user.openingBalance,
-        'accountType': user.accountType,
-        'createdAt': user.createdAt.toIso8601String(),
+        'opening_balance': user.openingBalance,
+        'account_type': user.accountType,
+        'created_at': user.createdAt.toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -110,21 +114,29 @@ class SqliteService {
 
   Future<UserModel?> getUser({String? id}) async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = id != null 
-        ? await db.query('users', where: 'id = ?', whereArgs: [id])
-        : await db.query('users', limit: 1); // Get the "current" or last user if no ID
+    final List<Map<String, dynamic>> maps;
+
+    if (id != null) {
+      maps = await db.query('users', where: 'id = ?', whereArgs: [id]);
+    } else {
+      // Get the most recent user
+      maps = await db.query('users', limit: 1);
+    }
 
     if (maps.isEmpty) return null;
-    
+
+    final user = maps.first;
     return UserModel(
-      id: maps[0]['id'],
-      name: maps[0]['name'],
-      email: maps[0]['email'],
-      businessName: maps[0]['businessName'],
-      currency: maps[0]['currency'],
-      openingBalance: (maps[0]['openingBalance'] as num).toDouble(),
-      accountType: maps[0]['accountType'],
-      createdAt: DateTime.parse(maps[0]['createdAt']),
+      id: user['id'],
+      name: user['name'],
+      email: user['email'],
+      businessName: user['business_name'],
+      currency: user['currency'],
+      openingBalance: user['opening_balance'] is int
+          ? (user['opening_balance'] as int).toDouble()
+          : user['opening_balance'],
+      accountType: user['account_type'],
+      createdAt: DateTime.parse(user['created_at']),
     );
   }
 
@@ -133,18 +145,19 @@ class SqliteService {
     await db.delete('users', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Category Operations
+  // ==================== CATEGORY OPERATIONS ====================
+
   Future<void> insertCategory(CategoryModel category, String userId) async {
     final db = await database;
     await db.insert(
       'categories',
       {
         'id': category.id,
-        'userId': userId,
+        'user_id': userId,
         'name': category.name,
-        'type': category.type.name,
+        'type': category.type == CategoryType.expense ? 'expense' : 'income',
         'icon': category.icon,
-        'isDefault': category.isDefault ? 1 : 0,
+        'is_default': category.isDefault ? 1 : 0,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -153,19 +166,54 @@ class SqliteService {
   Future<List<CategoryModel>> getCategories(String userId) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'categories', 
-      where: 'userId = ? OR isDefault = 1', 
-      whereArgs: [userId]
+      'categories',
+      where: 'user_id = ? OR is_default = 1',
+      whereArgs: [userId],
+      orderBy: 'name ASC',
     );
-    return List.generate(maps.length, (i) {
+
+    return maps.map((map) {
       return CategoryModel(
-        id: maps[i]['id'],
-        name: maps[i]['name'],
-        type: maps[i]['type'] == 'expense' ? CategoryType.expense : CategoryType.income,
-        icon: maps[i]['icon'],
-        isDefault: maps[i]['isDefault'] == 1,
+        id: map['id'],
+        name: map['name'],
+        type: map['type'] == 'expense' ? CategoryType.expense : CategoryType.income,
+        icon: map['icon'],
+        isDefault: map['is_default'] == 1,
       );
-    });
+    }).toList();
+  }
+
+  Future<CategoryModel?> getCategoryById(String id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isEmpty) return null;
+
+    final map = maps.first;
+    return CategoryModel(
+      id: map['id'],
+      name: map['name'],
+      type: map['type'] == 'expense' ? CategoryType.expense : CategoryType.income,
+      icon: map['icon'],
+      isDefault: map['is_default'] == 1,
+    );
+  }
+
+  Future<void> updateCategory(CategoryModel category) async {
+    final db = await database;
+    await db.update(
+      'categories',
+      {
+        'name': category.name,
+        'icon': category.icon,
+      },
+      where: 'id = ?',
+      whereArgs: [category.id],
+    );
   }
 
   Future<void> deleteCategory(String id) async {
@@ -173,56 +221,63 @@ class SqliteService {
     await db.delete('categories', where: 'id = ?', whereArgs: [id]);
   }
 
-  // Transaction Operations
+  // ==================== TRANSACTION OPERATIONS ====================
+
   Future<void> insertTransaction(TransactionModel transaction, String userId) async {
     final db = await database;
-    
+
+    // Handle credit payment logic - update the corresponding credit sale
     if (transaction.type == TransactionType.creditPayment && transaction.customerName != null) {
       final List<Map<String, dynamic>> pendingSales = await db.query(
         'transactions',
-        where: 'userId = ? AND type = ? AND customerName = ? AND isPaid = 0',
-        whereArgs: [userId, TransactionType.creditSale.name, transaction.customerName],
+        where: 'user_id = ? AND type = ? AND customer_name = ? AND is_paid = 0',
+        whereArgs: [userId, 'creditSale', transaction.customerName],
       );
 
       if (pendingSales.isNotEmpty) {
-        final t = pendingSales.first;
-        final currentAmount = (t['amount'] as num).toDouble();
+        final sale = pendingSales.first;
+        final currentAmount = sale['amount'] is int
+            ? (sale['amount'] as int).toDouble()
+            : sale['amount'];
         final newAmount = currentAmount - transaction.amount;
 
         if (newAmount <= 0.01) {
+          // Full payment - mark as paid
           await db.update(
             'transactions',
-            {'isPaid': 1},
+            {'is_paid': 1},
             where: 'id = ?',
-            whereArgs: [t['id']],
+            whereArgs: [sale['id']],
           );
         } else {
+          // Partial payment - update remaining amount
           await db.update(
             'transactions',
             {'amount': newAmount},
             where: 'id = ?',
-            whereArgs: [t['id']],
+            whereArgs: [sale['id']],
           );
         }
       }
     }
 
+    // Insert the new transaction
     await db.insert(
       'transactions',
       {
         'id': transaction.id,
-        'userId': userId,
+        'user_id': userId,
         'type': transaction.type.name,
         'amount': transaction.amount,
         'category': transaction.category,
         'description': transaction.description,
         'date': transaction.date.toIso8601String(),
-        'paymentMethod': transaction.paymentMethod,
-        'customerName': transaction.customerName,
-        'customerMobile': transaction.customerMobile,
-        'items': transaction.items?.toString(),
-        'isPaid': transaction.isPaid ? 1 : 0,
-        'dueDate': transaction.dueDate?.toIso8601String(),
+        'payment_method': transaction.paymentMethod,
+        'customer_name': transaction.customerName,
+        'customer_mobile': transaction.customerMobile,
+        'items': transaction.items != null ? transaction.items.toString() : null,
+        'is_paid': transaction.isPaid ? 1 : 0,
+        'due_date': transaction.dueDate?.toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -231,56 +286,210 @@ class SqliteService {
   Future<List<TransactionModel>> getTransactions(String userId) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'transactions', 
-      where: 'userId = ?', 
-      whereArgs: [userId]
+      'transactions',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'date DESC',
     );
-    return List.generate(maps.length, (i) {
+
+    return maps.map((map) {
       return TransactionModel(
-        id: maps[i]['id'],
-        type: TransactionType.values.byName(maps[i]['type']),
-        amount: (maps[i]['amount'] as num).toDouble(),
-        category: maps[i]['category'],
-        description: maps[i]['description'],
-        date: DateTime.parse(maps[i]['date']),
-        paymentMethod: maps[i]['paymentMethod'],
-        customerName: maps[i]['customerName'],
-        customerMobile: maps[i]['customerMobile'],
-        isPaid: maps[i]['isPaid'] == 1,
-        dueDate: maps[i]['dueDate'] != null ? DateTime.parse(maps[i]['dueDate']) : null,
+        id: map['id'],
+        type: _parseTransactionType(map['type']),
+        amount: map['amount'] is int
+            ? (map['amount'] as int).toDouble()
+            : map['amount'],
+        category: map['category'],
+        description: map['description'],
+        date: DateTime.parse(map['date']),
+        paymentMethod: map['payment_method'],
+        customerName: map['customer_name'],
+        customerMobile: map['customer_mobile'],
+        isPaid: map['is_paid'] == 1,
+        dueDate: map['due_date'] != null ? DateTime.parse(map['due_date']) : null,
       );
-    });
+    }).toList();
   }
 
-  Future<void> clearUserData(String userId) async {
+  Future<List<TransactionModel>> getCreditSales(String userId) async {
     final db = await database;
-    await db.delete('transactions', where: 'userId = ?', whereArgs: [userId]);
-    await db.delete('categories', where: 'userId = ? AND isDefault = 0', whereArgs: [userId]);
-    await db.delete('users', where: 'id = ?', whereArgs: [userId]);
+    final List<Map<String, dynamic>> maps = await db.query(
+      'transactions',
+      where: 'user_id = ? AND type = ? AND is_paid = 0',
+      whereArgs: [userId, 'creditSale'],
+      orderBy: 'due_date ASC, date DESC',
+    );
+
+    return maps.map((map) {
+      return TransactionModel(
+        id: map['id'],
+        type: TransactionType.creditSale,
+        amount: map['amount'] is int
+            ? (map['amount'] as int).toDouble()
+            : map['amount'],
+        category: map['category'],
+        description: map['description'],
+        date: DateTime.parse(map['date']),
+        paymentMethod: map['payment_method'],
+        customerName: map['customer_name'],
+        customerMobile: map['customer_mobile'],
+        isPaid: map['is_paid'] == 1,
+        dueDate: map['due_date'] != null ? DateTime.parse(map['due_date']) : null,
+      );
+    }).toList();
+  }
+
+  Future<void> updateTransaction(TransactionModel transaction) async {
+    final db = await database;
+    await db.update(
+      'transactions',
+      {
+        'amount': transaction.amount,
+        'category': transaction.category,
+        'description': transaction.description,
+        'payment_method': transaction.paymentMethod,
+        'customer_name': transaction.customerName,
+        'customer_mobile': transaction.customerMobile,
+        'items': transaction.items?.toString(),
+        'is_paid': transaction.isPaid ? 1 : 0,
+        'due_date': transaction.dueDate?.toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [transaction.id],
+    );
+  }
+
+  Future<void> deleteTransaction(String id) async {
+    final db = await database;
+    await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ==================== BUSINESS SUMMARY QUERIES ====================
+
+  Future<double> getCurrentBalance(String userId) async {
+    final user = await getUser(id: userId);
+    final transactions = await getTransactions(userId);
+
+    double balance = user?.openingBalance ?? 0;
+
+    for (var t in transactions) {
+      if (t.type == TransactionType.income) {
+        balance += t.amount;
+      } else if (t.type == TransactionType.expense) {
+        balance -= t.amount;
+      } else if (t.type == TransactionType.creditPayment) {
+        balance += t.amount;
+      }
+      // Credit sales don't affect cash balance until paid
+    }
+
+    return balance;
+  }
+
+  Future<double> getTotalCreditOutstanding(String userId) async {
+    final transactions = await getTransactions(userId);
+    double total = 0;
+
+    for (var t in transactions) {
+      if (t.type == TransactionType.creditSale && !t.isPaid) {
+        total += t.amount;
+      }
+    }
+    return total;
+  }
+
+  Future<Map<String, double>> getTodaySummary(String userId) async {
+    final today = DateTime.now();
+    final transactions = await getTransactions(userId);
+
+    double income = 0;
+    double expense = 0;
+    double credit = 0;
+
+    for (var t in transactions) {
+      final isToday = t.date.year == today.year &&
+          t.date.month == today.month &&
+          t.date.day == today.day;
+
+      if (isToday) {
+        if (t.type == TransactionType.income) {
+          income += t.amount;
+        } else if (t.type == TransactionType.expense) {
+          expense += t.amount;
+        } else if (t.type == TransactionType.creditSale && !t.isPaid) {
+          credit += t.amount;
+        } else if (t.type == TransactionType.creditPayment) {
+          income += t.amount;
+        }
+      }
+    }
+
+    return {
+      'income': income,
+      'expense': expense,
+      'credit': credit,
+    };
+  }
+
+  // ==================== UTILITY METHODS ====================
+
+  TransactionType _parseTransactionType(String type) {
+    switch (type) {
+      case 'income':
+        return TransactionType.income;
+      case 'expense':
+        return TransactionType.expense;
+      case 'creditSale':
+        return TransactionType.creditSale;
+      case 'creditPayment':
+        return TransactionType.creditPayment;
+      default:
+        return TransactionType.expense;
+    }
   }
 
   Future<void> initDefaultCategories(String userId) async {
-    final db = await database;
-    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM categories WHERE userId = ?', [userId]));
-    if (count == 0) {
-      for (var cat in AppConstants.defaultExpenseCategories) {
-        await insertCategory(CategoryModel(
-          id: 'expense_${cat['name']}_$userId',
+    final existingCategories = await getCategories(userId);
+    if (existingCategories.isNotEmpty) return;
+
+    // Add default expense categories
+    for (var cat in AppConstants.defaultExpenseCategories) {
+      await insertCategory(
+        CategoryModel(
+          id: 'expense_${cat['name']}_${DateTime.now().millisecondsSinceEpoch}',
           name: cat['name']!,
           type: CategoryType.expense,
           icon: cat['icon']!,
           isDefault: true,
-        ), userId);
-      }
-      for (var cat in AppConstants.defaultIncomeCategories) {
-        await insertCategory(CategoryModel(
-          id: 'income_${cat['name']}_$userId',
+        ),
+        userId,
+      );
+    }
+
+    // Add default income categories
+    for (var cat in AppConstants.defaultIncomeCategories) {
+      await insertCategory(
+        CategoryModel(
+          id: 'income_${cat['name']}_${DateTime.now().millisecondsSinceEpoch}',
           name: cat['name']!,
           type: CategoryType.income,
           icon: cat['icon']!,
           isDefault: true,
-        ), userId);
-      }
+        ),
+        userId,
+      );
     }
+  }
+
+  Future<void> clearUserData(String userId) async {
+    final db = await database;
+    await db.delete('transactions', where: 'user_id = ?', whereArgs: [userId]);
+    await db.delete('categories', where: 'user_id = ? AND is_default = 0', whereArgs: [userId]);
+    await db.delete('users', where: 'id = ?', whereArgs: [userId]);
+  }
+
+  Future<void> close() async {
+    final db = await database;
+    await db.close();
   }
 }

@@ -6,10 +6,8 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  // Stream of auth state changes
   Stream<User?> get user => _auth.authStateChanges();
 
-  // Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -24,15 +22,18 @@ class AuthService {
       return await _auth.signInWithCredential(credential);
     } catch (e) {
       debugPrint("Error signing in with Google: $e");
+      // Check if it's a "web client ID" error
+      if (e.toString().contains("webClientId")) {
+        debugPrint("Please add web client ID to GoogleSignIn configuration");
+      }
       return null;
     }
   }
 
-  // Sign up with Email and Password
   Future<UserCredential?> signUpWithEmail(String email, String password) async {
     try {
       return await _auth.createUserWithEmailAndPassword(
-        email: email,
+        email: email.trim(),
         password: password,
       );
     } catch (e) {
@@ -41,11 +42,10 @@ class AuthService {
     }
   }
 
-  // Sign in with Email and Password
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
       return await _auth.signInWithEmailAndPassword(
-        email: email,
+        email: email.trim(),
         password: password,
       );
     } catch (e) {
@@ -54,7 +54,6 @@ class AuthService {
     }
   }
 
-  // Sign out
   Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
@@ -64,6 +63,5 @@ class AuthService {
     }
   }
 
-  // Get current user
   User? get currentUser => _auth.currentUser;
 }
