@@ -5,6 +5,7 @@ import '../../providers/user_provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../models/transaction_model.dart';
+import '../../services/pdf_export_service.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/transaction_item.dart';
 
@@ -101,6 +102,125 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
     ];
     return months[month - 1];
   }
+
+  // ==================== PDF GENERATION METHODS ====================
+
+  Future<void> _generateAndShowSummaryPdf(Map<String, dynamic> statement) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user!;
+
+    final transactions = statement['transactions'] as List<TransactionModel>;
+
+    // Calculate income breakdown
+    Map<String, double> incomeBreakdown = {};
+    Map<String, double> expenseBreakdown = {};
+
+    for (var t in transactions) {
+      if (t.type == TransactionType.income || t.type == TransactionType.creditPayment) {
+        incomeBreakdown[t.category] = (incomeBreakdown[t.category] ?? 0) + t.amount;
+      } else if (t.type == TransactionType.expense) {
+        expenseBreakdown[t.category] = (expenseBreakdown[t.category] ?? 0) + t.amount;
+      }
+    }
+
+    // Get pending credits
+    final pendingCredits = transactions.where((t) =>
+    t.type == TransactionType.creditSale && !t.isPaid
+    ).toList();
+
+    final year = statement['year'] as int;
+    final month = statement['month'] as int;
+    final startDate = DateTime(year, month, 1);
+    final endDate = DateTime(year, month + 1, 0);
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final pdfFile = await PdfExportService.generateSummaryPdf(
+        businessName: user.businessName,
+        ownerName: user.name,
+        monthYear: '${statement['monthName']} ${statement['year']}',
+        startDate: startDate,
+        endDate: endDate,
+        openingBalance: 0,
+        totalIncome: statement['income'],
+        totalExpense: statement['expense'],
+        closingBalance: (statement['income'] as double) - (statement['expense'] as double),
+        creditOutstanding: statement['credit'],
+        incomeBreakdown: incomeBreakdown,
+        expenseBreakdown: expenseBreakdown,
+        pendingCredits: pendingCredits,
+        transactionCount: transactions.length,
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        await PdfExportService.showPdfPreview(
+          context: context,
+          pdfFile: pdfFile,
+          title: 'Monthly Statement - ${statement['monthName']} ${statement['year']}',
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating PDF: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _generateAndShowDetailedPdf(Map<String, dynamic> statement) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user!;
+
+    final transactions = statement['transactions'] as List<TransactionModel>;
+    final year = statement['year'] as int;
+    final month = statement['month'] as int;
+    final startDate = DateTime(year, month, 1);
+    final endDate = DateTime(year, month + 1, 0);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final pdfFile = await PdfExportService.generateDetailedPdf(
+        businessName: user.businessName,
+        ownerName: user.name,
+        monthYear: '${statement['monthName']} ${statement['year']}',
+        startDate: startDate,
+        endDate: endDate,
+        transactions: transactions,
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        await PdfExportService.showPdfPreview(
+          context: context,
+          pdfFile: pdfFile,
+          title: 'Detailed Report - ${statement['monthName']} ${statement['year']}',
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating PDF: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  // ==================== BUILD METHODS ====================
 
   @override
   Widget build(BuildContext context) {
@@ -287,134 +407,131 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
       ),
-      child: InkWell(
-        onTap: () => _showStatementDetail(statement),
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Center(
-                      child: Text(
-                        statement['month'].toString(),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          monthYear,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '$transactionCount transactions',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isProfit
-                          ? AppColors.success.withValues(alpha: 0.1)
-                          : AppColors.error.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                  child: Center(
                     child: Text(
-                      isProfit ? 'Profit' : 'Loss',
+                      statement['month'].toString(),
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isProfit ? AppColors.success : AppColors.error,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _buildMiniStat(
-                    'Income',
-                    statement['income'],
-                    AppColors.income,
-                  ),
-                  const SizedBox(width: 16),
-                  _buildMiniStat(
-                    'Expense',
-                    statement['expense'],
-                    AppColors.expense,
-                  ),
-                  const SizedBox(width: 16),
-                  _buildMiniStat(
-                    'Profit',
-                    profit,
-                    isProfit ? AppColors.success : AppColors.error,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: (statement['income'] / (statement['income'] + statement['expense'])).clamp(0.0, 1.0),
-                  backgroundColor: AppColors.expense.withValues(alpha: 0.3),
-                  color: AppColors.income,
-                  minHeight: 6,
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton.icon(
-                      onPressed: () => _showStatementDetail(statement),
-                      icon: const Icon(Icons.visibility, size: 18),
-                      label: const Text('View'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        monthYear,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                      Text(
+                        '$transactionCount transactions',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isProfit
+                        ? AppColors.success.withValues(alpha: 0.1)
+                        : AppColors.error.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isProfit ? 'Profit' : 'Loss',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isProfit ? AppColors.success : AppColors.error,
                     ),
                   ),
-                  Expanded(
-                    child: TextButton.icon(
-                      onPressed: () => _downloadStatement(statement),
-                      icon: const Icon(Icons.download, size: 18),
-                      label: const Text('Download'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.secondary,
-                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildMiniStat(
+                  'Income',
+                  statement['income'],
+                  AppColors.income,
+                ),
+                const SizedBox(width: 16),
+                _buildMiniStat(
+                  'Expense',
+                  statement['expense'],
+                  AppColors.expense,
+                ),
+                const SizedBox(width: 16),
+                _buildMiniStat(
+                  'Profit',
+                  profit,
+                  isProfit ? AppColors.success : AppColors.error,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: (statement['income'] / (statement['income'] + statement['expense'])).clamp(0.0, 1.0),
+                backgroundColor: AppColors.expense.withValues(alpha: 0.3),
+                color: AppColors.income,
+                minHeight: 6,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // NEW BUTTONS - SUMMARY and DETAILS
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _generateAndShowSummaryPdf(statement),
+                    icon: const Icon(Icons.picture_as_pdf, size: 18),
+                    label: const Text('Summary'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _generateAndShowDetailedPdf(statement),
+                    icon: const Icon(Icons.receipt_long, size: 18),
+                    label: const Text('Details'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.secondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -440,203 +557,6 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
               fontWeight: FontWeight.bold,
               color: color,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showStatementDetail(Map<String, dynamic> statement) {
-    String monthYear = '${statement['monthName']} ${statement['year']}';
-    List<TransactionModel> transactions = statement['transactions'];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) {
-          double totalIncome = statement['income'] as double;
-          double totalExpense = statement['expense'] as double;
-          double profit = totalIncome - totalExpense;
-
-          return Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.description,
-                      color: AppColors.primary,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            monthYear,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            '${transactions.length} transactions',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => _downloadStatement(statement),
-                      icon: const Icon(Icons.download),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Text('Income', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                            const SizedBox(height: 4),
-                            Text(
-                              CurrencyFormatter.formatLKR(totalIncome),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.income),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        height: 40,
-                        width: 1,
-                        color: Colors.grey[300],
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Text('Expense', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                            const SizedBox(height: 4),
-                            Text(
-                              CurrencyFormatter.formatLKR(totalExpense),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.expense),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        height: 40,
-                        width: 1,
-                        color: Colors.grey[300],
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Text('Profit', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                            const SizedBox(height: 4),
-                            Text(
-                              CurrencyFormatter.formatLKR(profit),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: profit >= 0 ? AppColors.success : AppColors.error,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Transactions',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.builder(
-                    controller: scrollController,
-                    itemCount: transactions.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: TransactionItem(
-                          transaction: transactions[index],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _downloadStatement(Map<String, dynamic> statement) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Download Statement'),
-        content: const Text('Choose format to download'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showDownloadSuccess('PDF');
-            },
-            child: const Text('PDF'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showDownloadSuccess('Excel');
-            },
-            child: const Text('Excel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showDownloadSuccess('CSV');
-            },
-            child: const Text('CSV'),
           ),
         ],
       ),
@@ -693,7 +613,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
   void _showDownloadSuccess(String format) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$format download started'),
+        content: Text('$format generation started'),
         backgroundColor: AppColors.success,
         duration: const Duration(seconds: 2),
       ),

@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.smallbiz_accounts"
-    compileSdk = 35
+    compileSdk = 36  // Changed from 35 to 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -22,7 +22,7 @@ android {
     defaultConfig {
         applicationId = "com.example.smallbiz_accounts"
         minSdk = flutter.minSdkVersion
-        targetSdk = 35
+        targetSdk = 36  // Changed from 35 to 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
@@ -30,13 +30,8 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            // Either enable both minifyEnabled and shrinkResources, or disable both
             isMinifyEnabled = false
             isShrinkResources = false
-            // Or if you want to enable them:
-            // isMinifyEnabled = true
-            // isShrinkResources = true
-            // proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
 }
@@ -46,14 +41,9 @@ flutter {
 }
 
 dependencies {
-    // Import the Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
-
-    // Firebase products
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
-
-    // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.0.0")
 }
