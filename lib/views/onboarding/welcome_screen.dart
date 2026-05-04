@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/language_provider.dart';
 import '../../utils/colors.dart';
 import 'basic_info_screen.dart';
 import 'email_auth_screen.dart';
@@ -11,6 +13,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -31,6 +34,10 @@ class WelcomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: _buildLanguageSelector(context, localizations),
+                ),
                 const Spacer(flex: 1),
                 Center(
                   child: Container(
@@ -48,9 +55,9 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-                const Text(
-                  'SmallBiz Accounts',
-                  style: TextStyle(
+                Text(
+                  localizations.appName,
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -59,7 +66,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Manage your business finances with ease. Track income, expenses, and credit sales all in one place.',
+                  localizations.welcomeMessage,
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white.withValues(alpha: 0.8),
@@ -72,22 +79,26 @@ class WelcomeScreen extends StatelessWidget {
                 else ...[
                   _buildButton(
                     context: context,
-                    text: 'Login',
-                    onPressed: () => Navigator.push(
-                      context, 
-                      MaterialPageRoute(builder: (_) => const EmailAuthScreen(isLogin: true))
-                    ),
+                    text: localizations.login,
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const EmailAuthScreen(isLogin: true))
+                      );
+                    },
                     color: Colors.white,
                     textColor: AppColors.primary,
                   ),
                   const SizedBox(height: 16),
                   _buildButton(
                     context: context,
-                    text: 'Sign Up',
-                    onPressed: () => Navigator.push(
-                      context, 
-                      MaterialPageRoute(builder: (_) => const EmailAuthScreen(isLogin: false))
-                    ),
+                    text: localizations.signUp,
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const EmailAuthScreen(isLogin: false))
+                      );
+                    },
                     color: Colors.transparent,
                     textColor: Colors.white,
                     isOutlined: true,
@@ -96,6 +107,7 @@ class WelcomeScreen extends StatelessWidget {
                   Center(
                     child: TextButton(
                       onPressed: () {
+                        // Guest mode - go directly to BasicInfoScreen
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -104,7 +116,7 @@ class WelcomeScreen extends StatelessWidget {
                         );
                       },
                       child: Text(
-                        'Continue without sign in (Guest Mode)',
+                        localizations.guestMode,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.7),
                           fontWeight: FontWeight.normal,
@@ -120,6 +132,94 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageSelector(BuildContext context, AppLocalizations localizations) {
+    final languageProvider = Provider.of<LanguageProvider>(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: InkWell(
+        onTap: () => _showLanguageDialog(context, localizations, languageProvider),
+        borderRadius: BorderRadius.circular(25),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.language, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                languageProvider.isSinhala ? 'සිංහල' : 'English',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context, AppLocalizations localizations, LanguageProvider languageProvider) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(localizations.selectLanguage),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Text('🇬🇧', style: TextStyle(fontSize: 24)),
+                title: Text(localizations.english),
+                trailing: !languageProvider.isSinhala
+                    ? const Icon(Icons.check_circle, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  languageProvider.changeLanguage('en');
+                  Navigator.pop(dialogContext);
+                  _showLanguageChangedSnackBar(context, localizations);
+                },
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Text('🇱🇰', style: TextStyle(fontSize: 24)),
+                title: Text(localizations.sinhala),
+                trailing: languageProvider.isSinhala
+                    ? const Icon(Icons.check_circle, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  languageProvider.changeLanguage('si');
+                  Navigator.pop(dialogContext);
+                  _showLanguageChangedSnackBar(context, localizations);
+                },
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLanguageChangedSnackBar(BuildContext context, AppLocalizations localizations) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(localizations.languageChanged),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

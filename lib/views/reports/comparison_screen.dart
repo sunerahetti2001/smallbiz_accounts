@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../models/transaction_model.dart';
@@ -39,15 +40,12 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
     });
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final transactionProvider = Provider.of<TransactionProvider>(
-      context,
-      listen: false,
-    );
+    final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
 
     if (userProvider.user != null) {
       await transactionProvider.loadTransactions(userProvider.user!.id);
     }
-    
+
     final allTransactions = transactionProvider.transactions;
 
     _thisMonthIncome = 0;
@@ -158,9 +156,20 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(localizations.loading),
+            ],
+          ),
+        ),
       );
     }
 
@@ -177,9 +186,9 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Compare',
-                        style: TextStyle(
+                      Text(
+                        localizations.compare,
+                        style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -187,7 +196,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Month-to-month financial comparison',
+                        localizations.monthToMonth,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.white.withValues(alpha: 0.8),
@@ -222,9 +231,9 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
-                                'Current Month',
-                                style: TextStyle(
+                              Text(
+                                localizations.thisMonth,
+                                style: const TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
                                 ),
@@ -251,9 +260,9 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              const Text(
-                                'Previous Month',
-                                style: TextStyle(
+                              Text(
+                                localizations.lastMonth,
+                                style: const TextStyle(
                                   fontSize: 12,
                                   color: AppColors.textSecondary,
                                 ),
@@ -266,31 +275,34 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                   ),
                   const SizedBox(height: 24),
                   _buildComparisonCard(
-                    title: 'Income',
+                    title: localizations.income,
                     icon: Icons.trending_down,
                     color: AppColors.income,
                     thisValue: _comparisonData['thisMonth']['income'],
                     lastValue: _comparisonData['lastMonth']['income'],
                     change: _comparisonData['changes']['income'],
+                    localizations: localizations,
                   ),
                   const SizedBox(height: 16),
                   _buildComparisonCard(
-                    title: 'Expense',
+                    title: localizations.expense,
                     icon: Icons.trending_up,
                     color: AppColors.expense,
                     thisValue: _comparisonData['thisMonth']['expense'],
                     lastValue: _comparisonData['lastMonth']['expense'],
                     change: _comparisonData['changes']['expense'],
+                    localizations: localizations,
                   ),
                   const SizedBox(height: 16),
                   _buildComparisonCard(
-                    title: 'Net Profit',
+                    title: localizations.netProfit,
                     icon: Icons.trending_up,
                     color: AppColors.secondary,
                     thisValue: _comparisonData['thisMonth']['profit'],
                     lastValue: _comparisonData['lastMonth']['profit'],
                     change: _comparisonData['changes']['profit'],
                     isProfit: true,
+                    localizations: localizations,
                   ),
                   const SizedBox(height: 24),
                   if (_comparisonData['thisMonth']['credit'] > 0 || _comparisonData['lastMonth']['credit'] > 0)
@@ -300,9 +312,9 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Credit Sales Outstanding',
-                              style: TextStyle(
+                            Text(
+                              localizations.creditOutstanding,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -378,10 +390,11 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
     required double thisValue,
     required double lastValue,
     required double change,
+    required AppLocalizations localizations,
     bool isProfit = false,
   }) {
     final bool isPositiveChange = change > 0;
-    final bool isIncomeOrProfit = title == 'Income' || title == 'Net Profit';
+    final bool isIncomeOrProfit = title == localizations.income || title == localizations.netProfit;
     final bool isGoodChange = (isIncomeOrProfit && isPositiveChange) ||
         (!isIncomeOrProfit && !isPositiveChange);
 
@@ -447,7 +460,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'This Month',
+                        localizations.thisMonth,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -470,7 +483,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Last Month',
+                        localizations.lastMonth,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],

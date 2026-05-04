@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/user_provider.dart';
 import 'providers/transaction_provider.dart';
 import 'providers/category_provider.dart';
+import 'l10n/app_localizations.dart';
+import 'l10n/language_provider.dart';
 import 'utils/theme.dart';
 import 'views/onboarding/welcome_screen.dart';
+import 'views/onboarding/basic_info_screen.dart';
 import 'views/home/home_screen.dart';
-import 'services/sqlite_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
+
   await Firebase.initializeApp();
-  
-  // Initialize SQLite
-  final sqlite = SqliteService();
-  await sqlite.database;
 
   runApp(const MyApp());
 }
@@ -32,12 +30,36 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => TransactionProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],
-      child: MaterialApp(
-        title: 'SmallBiz Accounts',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        home: const AppLoader(),
+      child: Consumer<LanguageProvider>(
+        builder: (context, languageProvider, child) {
+          return MaterialApp(
+            title: 'SmallBiz Accounts',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            locale: languageProvider.locale,
+            supportedLocales: const [
+              Locale('en', ''),
+              Locale('si', ''),
+            ],
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            localeResolutionCallback: (locale, supportedLocales) {
+              for (var supportedLocale in supportedLocales) {
+                if (supportedLocale.languageCode == locale?.languageCode) {
+                  return supportedLocale;
+                }
+              }
+              return supportedLocales.first;
+            },
+            home: const AppLoader(),
+          );
+        },
       ),
     );
   }
@@ -51,6 +73,8 @@ class AppLoader extends StatefulWidget {
 }
 
 class _AppLoaderState extends State<AppLoader> {
+  bool _isInitializing = true;
+
   @override
   void initState() {
     super.initState();
@@ -58,32 +82,46 @@ class _AppLoaderState extends State<AppLoader> {
   }
 
   Future<void> _initializeApp() async {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      await userProvider.loadUser();
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    await userProvider.loadUser();
 
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
 
-    if (userProvider.isLoading) {
-      return const Scaffold(
+    if (_isInitializing || userProvider.isLoading) {
+      return Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(AppLocalizations.of(context).loading),
+            ],
+          ),
         ),
       );
     }
 
+    // User exists in SQLite -> Home
     if (userProvider.isOnboarded) {
       return const HomeScreen();
     }
 
+    // Firebase user exists but no SQLite record -> Onboarding
+    if (userProvider.needsOnboarding) {
+      return const BasicInfoScreen();
+    }
+
+    // No user at all -> Welcome
     return const WelcomeScreen();
   }
 }

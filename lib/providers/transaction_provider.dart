@@ -21,12 +21,15 @@ class TransactionProvider with ChangeNotifier {
   Future<void> loadTransactions(String userId) async {
     _currentUserId = userId;
     _isLoading = true;
-    
+    notifyListeners();
+
     try {
       _transactions = await _sqlite.getTransactions(userId);
       await _calculateSummaries(userId);
+      debugPrint('TransactionProvider: Loaded ${_transactions.length} transactions for user $userId');
     } catch (e) {
       debugPrint('Error loading transactions: $e');
+      _transactions = [];
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -34,48 +37,53 @@ class TransactionProvider with ChangeNotifier {
   }
 
   Future<void> _calculateSummaries(String userId) async {
-    final user = await _sqlite.getUser(id: userId);
-    double balance = user?.openingBalance ?? 0;
-    
-    double credit = 0;
-    double todayIncome = 0;
-    double todayExpense = 0;
-    double todayCredit = 0;
-    
-    final today = DateTime.now();
+    try {
+      final user = await _sqlite.getUser(id: userId);
+      double balance = user?.openingBalance ?? 0;
 
-    for (var t in _transactions) {
-      bool isToday = t.date.year == today.year && 
-                     t.date.month == today.month && 
-                     t.date.day == today.day;
+      double credit = 0;
+      double todayIncome = 0;
+      double todayExpense = 0;
+      double todayCredit = 0;
 
-      if (t.type == TransactionType.income) {
-        balance += t.amount;
-        if (isToday) todayIncome += t.amount;
-      } else if (t.type == TransactionType.expense) {
-        balance -= t.amount;
-        if (isToday) todayExpense += t.amount;
-      } else if (t.type == TransactionType.creditPayment) {
-        balance += t.amount;
-        if (isToday) todayIncome += t.amount;
-      } else if (t.type == TransactionType.creditSale) {
-        if (!t.isPaid) {
-          credit += t.amount;
-          if (isToday) todayCredit += t.amount;
+      final today = DateTime.now();
+
+      for (var t in _transactions) {
+        bool isToday = t.date.year == today.year &&
+            t.date.month == today.month &&
+            t.date.day == today.day;
+
+        if (t.type == TransactionType.income) {
+          balance += t.amount;
+          if (isToday) todayIncome += t.amount;
+        } else if (t.type == TransactionType.expense) {
+          balance -= t.amount;
+          if (isToday) todayExpense += t.amount;
+        } else if (t.type == TransactionType.creditPayment) {
+          balance += t.amount;
+          if (isToday) todayIncome += t.amount;
+        } else if (t.type == TransactionType.creditSale) {
+          if (!t.isPaid) {
+            credit += t.amount;
+            if (isToday) todayCredit += t.amount;
+          }
         }
       }
-    }
 
-    _currentBalance = balance;
-    _creditOutstanding = credit;
-    _todaySummary = {
-      'income': todayIncome,
-      'expense': todayExpense,
-      'credit': todayCredit,
-    };
+      _currentBalance = balance;
+      _creditOutstanding = credit;
+      _todaySummary = {
+        'income': todayIncome,
+        'expense': todayExpense,
+        'credit': todayCredit,
+      };
+    } catch (e) {
+      debugPrint('Error calculating summaries: $e');
+    }
   }
 
   Future<void> addTransaction(TransactionModel transaction, String userId) async {
+    debugPrint('TransactionProvider: Adding transaction for user $userId');
     await _sqlite.insertTransaction(transaction, userId);
     await loadTransactions(userId);
   }
@@ -107,5 +115,15 @@ class TransactionProvider with ChangeNotifier {
     });
 
     return grouped;
+  }
+
+  // Clear data (useful for logout)
+  void clear() {
+    _transactions = [];
+    _currentBalance = 0;
+    _creditOutstanding = 0;
+    _todaySummary = {};
+    _currentUserId = null;
+    notifyListeners();
   }
 }

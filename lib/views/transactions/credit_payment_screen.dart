@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/transaction_model.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 
@@ -41,48 +42,76 @@ class _CreditPaymentScreenState extends State<CreditPaymentScreen> {
   @override
   Widget build(BuildContext context) {
     final transactionProvider = Provider.of<TransactionProvider>(context);
-    final unpaidCredits = transactionProvider.transactions.where((t) => t.type == TransactionType.creditSale && !t.isPaid).toList();
+    final localizations = AppLocalizations.of(context);
+    final unpaidCredits = transactionProvider.transactions
+        .where((t) => t.type == TransactionType.creditSale && !t.isPaid)
+        .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Receive Credit Payment')),
+      appBar: AppBar(title: Text(localizations.creditPayment)),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const Text('Select Credit Sale', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(localizations.selectCustomer, style: const TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: DropdownButton<TransactionModel>(
                 value: _selectedCredit,
                 isExpanded: true,
                 underline: const SizedBox(),
-                hint: const Text('Select customer'),
-                items: unpaidCredits.map((c) => DropdownMenuItem(value: c, child: Text('${c.customerName} - ${CurrencyFormatter.formatLKR(c.amount)}'))).toList(),
-                onChanged: (v) => setState(() { _selectedCredit = v; _amountController.text = v!.amount.toString(); }),
+                hint: Text(localizations.selectCustomer),
+                items: unpaidCredits.map((c) {
+                  return DropdownMenuItem(
+                    value: c,
+                    child: Text('${c.customerName} - ${CurrencyFormatter.formatLKR(c.amount)}'),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() {
+                  _selectedCredit = v;
+                  _amountController.text = v!.amount.toString();
+                }),
               ),
             ),
             if (_selectedCredit != null) ...[
               const SizedBox(height: 24),
-              const Text('Payment Amount', style: TextStyle(fontWeight: FontWeight.w500)),
+              Text(localizations.amount, style: const TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(hintText: '0.00', prefixText: 'Rs ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
-                validator: (value) => (value == null || (double.tryParse(value) ?? 0) <= 0) ? 'Enter valid amount' : null,
+                decoration: InputDecoration(
+                  hintText: '0.00',
+                  prefixText: 'Rs ',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                validator: (value) =>
+                (value == null || (double.tryParse(value) ?? 0) <= 0)
+                    ? localizations.pleaseEnterAmount
+                    : null,
               ),
               const SizedBox(height: 16),
-              const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.w500)),
+              Text(localizations.paymentMethod, style: const TextStyle(fontWeight: FontWeight.w500)),
               Row(
                 children: _paymentMethods.map((method) {
+                  String displayMethod;
+                  switch (method) {
+                    case 'Cash': displayMethod = localizations.cash;
+                    case 'Bank': displayMethod = localizations.bank;
+                    case 'Card': displayMethod = localizations.card;
+                    default: displayMethod = method;
+                  }
                   return Expanded(
                     child: Row(
                       children: [
                         Radio<String>(value: method, groupValue: _selectedPaymentMethod, onChanged: (v) => setState(() => _selectedPaymentMethod = v!), activeColor: AppColors.primary),
-                        Text(method),
+                        Text(displayMethod),
                       ],
                     ),
                   );
@@ -92,7 +121,7 @@ class _CreditPaymentScreenState extends State<CreditPaymentScreen> {
               ElevatedButton(
                 onPressed: _isLoading ? null : _saveTransaction,
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('RECORD PAYMENT'),
+                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(localizations.recordPayment),
               ),
             ],
           ],
@@ -102,6 +131,7 @@ class _CreditPaymentScreenState extends State<CreditPaymentScreen> {
   }
 
   Future<void> _saveTransaction() async {
+    final localizations = AppLocalizations.of(context);
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
@@ -120,7 +150,7 @@ class _CreditPaymentScreenState extends State<CreditPaymentScreen> {
         await Provider.of<TransactionProvider>(context, listen: false).addTransaction(payment, userId);
         if (mounted) Navigator.pop(context, true);
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${localizations.error}: $e')));
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }

@@ -6,6 +6,7 @@ import '../../models/category_model.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 
 class IncomeScreen extends StatefulWidget {
@@ -49,54 +50,74 @@ class _IncomeScreenState extends State<IncomeScreen> {
   @override
   Widget build(BuildContext context) {
     final categoryProvider = Provider.of<CategoryProvider>(context);
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Income')),
+      appBar: AppBar(title: Text(localizations.income)),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const Text('Amount', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(localizations.amount, style: const TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextFormField(
               controller: _amountController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(hintText: '0.00', prefixText: 'Rs ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
-              validator: (value) => (value == null || value.isEmpty) ? 'Enter amount' : null,
+              decoration: InputDecoration(
+                hintText: '0.00',
+                prefixText: 'Rs ',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              validator: (value) => (value == null || value.isEmpty) ? localizations.pleaseEnterAmount : null,
             ),
             const SizedBox(height: 16),
-            const Text('Category', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(localizations.selectCategory, style: const TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: DropdownButton<CategoryModel>(
                 value: _selectedCategory,
                 isExpanded: true,
                 underline: const SizedBox(),
-                items: categoryProvider.incomeCategories.map((c) => DropdownMenuItem(value: c, child: Text('${c.icon} ${c.name}'))).toList(),
+                items: categoryProvider.incomeCategories.map((c) {
+                  return DropdownMenuItem(value: c, child: Text('${c.icon} ${c.name}'));
+                }).toList(),
                 onChanged: (v) => setState(() => _selectedCategory = v),
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Description', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(localizations.description, style: const TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
-              decoration: InputDecoration(hintText: 'Description', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
-              validator: (value) => (value == null || value.isEmpty) ? 'Enter description' : null,
+              decoration: InputDecoration(
+                hintText: localizations.description,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              validator: (value) => (value == null || value.isEmpty) ? localizations.pleaseEnterDescription : null,
             ),
             const SizedBox(height: 16),
-            const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(localizations.paymentMethod, style: const TextStyle(fontWeight: FontWeight.w500)),
             Row(
               children: _paymentMethods.map((method) {
+                String displayMethod;
+                switch (method) {
+                  case 'Cash': displayMethod = localizations.cash;
+                  case 'Bank': displayMethod = localizations.bank;
+                  case 'Card': displayMethod = localizations.card;
+                  default: displayMethod = method;
+                }
                 return Expanded(
                   child: Row(
                     children: [
                       Radio<String>(value: method, groupValue: _selectedPaymentMethod, onChanged: (v) => setState(() => _selectedPaymentMethod = v!), activeColor: AppColors.primary),
-                      Text(method),
+                      Text(displayMethod),
                     ],
                   ),
                 );
@@ -106,7 +127,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
             ElevatedButton(
               onPressed: _isLoading ? null : _saveTransaction,
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.income, padding: const EdgeInsets.symmetric(vertical: 16)),
-              child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('SAVE INCOME'),
+              child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(localizations.saveIncome),
             ),
           ],
         ),
@@ -115,6 +136,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
   }
 
   Future<void> _saveTransaction() async {
+    final localizations = AppLocalizations.of(context);
     if (_formKey.currentState!.validate() && _selectedCategory != null) {
       setState(() => _isLoading = true);
       try {
@@ -132,7 +154,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
         await Provider.of<TransactionProvider>(context, listen: false).addTransaction(transaction, userId);
         if (mounted) Navigator.pop(context, true);
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${localizations.error}: $e'), backgroundColor: AppColors.error));
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }

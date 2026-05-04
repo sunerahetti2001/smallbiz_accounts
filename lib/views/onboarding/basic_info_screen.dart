@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import 'opening_balance_screen.dart';
@@ -18,13 +19,15 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Create Account'),
+        title: Text(localizations.createAccount),
       ),
       body: SafeArea(
         child: Padding(
@@ -34,46 +37,46 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Your Finance Hub Starts Here',
-                  style: TextStyle(
+                Text(
+                  localizations.yourFinanceHub,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Create an account to track income and expenses',
+                  localizations.createAccountDesc,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[600],
                   ),
                 ),
                 const SizedBox(height: 32),
-                const Text(
-                  'Your Name',
-                  style: TextStyle(fontWeight: FontWeight.w500),
+                Text(
+                  localizations.name,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
-                    hintText: 'Enter your name',
+                    hintText: localizations.pleaseEnterName,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
+                      return localizations.pleaseEnterName;
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Default Currency',
-                  style: TextStyle(fontWeight: FontWeight.w500),
+                Text(
+                  localizations.currency,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -118,9 +121,9 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
                             _agreedToTerms = !_agreedToTerms;
                           });
                         },
-                        child: const Text(
-                          'I agree to the Terms & Conditions',
-                          style: TextStyle(fontSize: 14),
+                        child: Text(
+                          localizations.agreeToTerms,
+                          style: const TextStyle(fontSize: 14),
                         ),
                       ),
                     ),
@@ -141,14 +144,14 @@ class _BasicInfoScreenState extends State<BasicInfoScreen> {
                       );
                     } else if (!_agreedToTerms) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please agree to Terms & Conditions'),
+                        SnackBar(
+                          content: Text(localizations.pleaseAgreeTerms),
                           backgroundColor: AppColors.error,
                         ),
                       );
                     }
                   },
-                  child: const Text('Get Started'),
+                  child: Text(localizations.getStarted),
                 ),
               ],
             ),

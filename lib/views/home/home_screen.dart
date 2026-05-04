@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/transaction_model.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/language_provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../widgets/bottom_nav.dart';
@@ -43,8 +45,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    if (userProvider.user == null) return;
 
+    if (userProvider.user == null) {
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+              (route) => false,
+        );
+      }
+      return;
+    }
+
+    debugPrint('HomeScreen: Loading transactions for user ${userProvider.user!.id}');
     final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
     await transactionProvider.loadTransactions(userProvider.user!.id);
 
@@ -69,11 +81,23 @@ class _HomeScreenState extends State<HomeScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final transactionProvider = Provider.of<TransactionProvider>(context);
 
-    if (userProvider.user == null || !_isInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+    if (userProvider.user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                (route) => false,
+          );
+        }
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    if (!_isInitialized) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    transactionProvider;
 
     final screens = [
       _buildHomeScreen(userProvider, transactionProvider),
@@ -115,11 +139,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickActionsMenu() {
+    final localizations = AppLocalizations.of(context);
+
     final actions = [
-      {'label': 'Income', 'path': 'income', 'icon': Icons.trending_up, 'color': AppColors.income},
-      {'label': 'Expense', 'path': 'expense', 'icon': Icons.trending_down, 'color': AppColors.expense},
-      {'label': 'Credit Sale', 'path': 'credit_sale', 'icon': Icons.receipt, 'color': AppColors.credit},
-      {'label': 'Payment', 'path': 'credit_payment', 'icon': Icons.payment, 'color': AppColors.primary},
+      {'label': localizations.income, 'path': 'income', 'icon': Icons.trending_up, 'color': AppColors.income},
+      {'label': localizations.expense, 'path': 'expense', 'icon': Icons.trending_down, 'color': AppColors.expense},
+      {'label': localizations.creditSale, 'path': 'credit_sale', 'icon': Icons.receipt, 'color': AppColors.credit},
+      {'label': localizations.creditPayment, 'path': 'credit_payment', 'icon': Icons.payment, 'color': AppColors.primary},
     ];
 
     return Container(
@@ -177,10 +203,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHomeScreen(UserProvider userProvider, TransactionProvider transactionProvider) {
     final user = userProvider.user!;
+    final localizations = AppLocalizations.of(context);
     final pendingCredits = transactionProvider.transactions
         .where((t) => t.type == TransactionType.creditSale && !t.isPaid)
         .toList();
-    
+
     return RefreshIndicator(
       onRefresh: _loadData,
       child: SingleChildScrollView(
@@ -188,8 +215,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(user),
-            if (userProvider.isGuest) _buildGuestReminder(context),
+            _buildHeader(user, localizations),
+            if (userProvider.isGuest) _buildGuestReminder(context, localizations),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -197,21 +224,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: StatCard(title: 'Income Today', value: transactionProvider.todaySummary['income'] ?? 0, icon: Icons.trending_up, color: AppColors.income)),
+                      Expanded(child: StatCard(title: localizations.incomeToday, value: transactionProvider.todaySummary['income'] ?? 0, icon: Icons.trending_up, color: AppColors.income)),
                       const SizedBox(width: 12),
-                      Expanded(child: StatCard(title: 'Expense Today', value: transactionProvider.todaySummary['expense'] ?? 0, icon: Icons.trending_down, color: AppColors.expense)),
+                      Expanded(child: StatCard(title: localizations.expenseToday, value: transactionProvider.todaySummary['expense'] ?? 0, icon: Icons.trending_down, color: AppColors.expense)),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _buildBalanceCard(transactionProvider),
-                  
+                  _buildBalanceCard(transactionProvider, localizations),
+
                   if (pendingCredits.isNotEmpty) ...[
                     const SizedBox(height: 24),
-                    _buildPendingCreditsSection(pendingCredits),
+                    _buildPendingCreditsSection(pendingCredits, localizations),
                   ],
-                  
+
                   const SizedBox(height: 24),
-                  _buildRecentTransactions(transactionProvider),
+                  _buildRecentTransactions(transactionProvider, localizations),
                 ],
               ),
             ),
@@ -221,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildGuestReminder(BuildContext context) {
+  Widget _buildGuestReminder(BuildContext context, AppLocalizations localizations) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(12),
@@ -234,22 +261,31 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const Icon(Icons.info_outline, color: Colors.amber),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Using as Guest. Connect an account to save your data permanently.',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              localizations.guestWarning,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmailAuthScreen())),
-            child: const Text('CONNECT', style: TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: () {
+              // Navigate to sign up page for guest users to connect
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EmailAuthScreen(isLogin: false)),
+              ).then((_) {
+                // Refresh data after returning from auth
+                _loadData();
+              });
+            },
+            child: Text(localizations.connect, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(dynamic user) {
+  Widget _buildHeader(dynamic user, AppLocalizations localizations) {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -264,8 +300,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Welcome back,', style: TextStyle(fontSize: 14, color: Colors.white70)),
-                Text('Hi ${user.name}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text(localizations.welcomeBack, style: const TextStyle(fontSize: 14, color: Colors.white70)),
+                Text('${localizations.hi} ${user.name}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                 Text(user.businessName, style: const TextStyle(fontSize: 12, color: Colors.white70)),
               ],
             ),
@@ -283,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBalanceCard(TransactionProvider provider) {
+  Widget _buildBalanceCard(TransactionProvider provider, AppLocalizations localizations) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -293,13 +329,13 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Available Balance', style: TextStyle(color: Colors.white70, fontSize: 14)),
+          Text(localizations.availableBalance, style: const TextStyle(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 8),
           Text('Rs ${provider.currentBalance.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           Row(
             children: [
-              const Text('Credit:', style: TextStyle(color: Colors.white70)),
+              Text('${localizations.creditOutstanding}:', style: const TextStyle(color: Colors.white70)),
               const SizedBox(width: 8),
               Text('Rs ${provider.creditOutstanding.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ],
@@ -309,17 +345,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPendingCreditsSection(List<TransactionModel> credits) {
+  Widget _buildPendingCreditsSection(List<TransactionModel> credits, AppLocalizations localizations) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Pending Payments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(localizations.pendingPayments, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             TextButton(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreditPaymentScreen())),
-              child: const Text('VIEW ALL'),
+              child: Text(localizations.viewAll),
             ),
           ],
         ),
@@ -332,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               final credit = credits[index];
               final bool isOverdue = credit.dueDate != null && credit.dueDate!.isBefore(DateTime.now());
-              
+
               return Container(
                 width: 200,
                 margin: const EdgeInsets.only(right: 12),
@@ -345,14 +381,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(credit.customerName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(credit.customerName ?? localizations.selectCustomer, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
                     const Spacer(),
                     Text('Rs ${credit.amount.toStringAsFixed(2)}', style: TextStyle(color: isOverdue ? Colors.red : AppColors.credit, fontWeight: FontWeight.bold, fontSize: 16)),
                     if (credit.dueDate != null)
-                      Text(
-                        'Due: ${credit.dueDate!.day}/${credit.dueDate!.month}',
-                        style: TextStyle(fontSize: 11, color: isOverdue ? Colors.red : Colors.grey),
-                      ),
+                      Text('${localizations.dueDate}: ${credit.dueDate!.day}/${credit.dueDate!.month}', style: TextStyle(fontSize: 11, color: isOverdue ? Colors.red : Colors.grey)),
                   ],
                 ),
               );
@@ -363,15 +396,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecentTransactions(TransactionProvider provider) {
+  Widget _buildRecentTransactions(TransactionProvider provider, AppLocalizations localizations) {
     final recent = provider.getRecentTransactions(limit: 5);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Recent Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(localizations.recentActivity, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        if (recent.isEmpty) const Center(child: Text('No transactions yet'))
-        else ...recent.map((t) => TransactionItem(transaction: t)),
+        if (recent.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Center(child: Text(localizations.noTransactions, style: const TextStyle(color: Colors.grey))),
+          )
+        else ...recent.map((t) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: TransactionItem(transaction: t),
+        )),
       ],
     );
   }
@@ -384,65 +424,168 @@ class ProfileBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user!;
+    final localizations = AppLocalizations.of(context);
 
     return Container(
-      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(radius: 40, child: Text(user.name[0].toUpperCase(), style: const TextStyle(fontSize: 32))),
+          CircleAvatar(
+            radius: 40,
+            child: Text(user.name[0].toUpperCase(), style: const TextStyle(fontSize: 32)),
+          ),
           const SizedBox(height: 16),
           Text(user.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           Text(user.businessName, style: TextStyle(color: Colors.grey[600])),
+
+          if (user.email != null && user.email!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.email_outlined, size: 16, color: Colors.grey[500]),
+                const SizedBox(width: 6),
+                Text(user.email!, style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                userProvider.isGuest ? Icons.person_outline : Icons.verified_user,
+                size: 16,
+                color: userProvider.isGuest ? Colors.amber : AppColors.success,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                userProvider.isGuest ? 'Guest Account' : 'Connected Account',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: userProvider.isGuest ? Colors.amber : AppColors.success,
+                ),
+              ),
+            ],
+          ),
+
           const Divider(height: 40),
+
           if (userProvider.isGuest)
             ListTile(
               leading: const Icon(Icons.link, color: AppColors.primary),
-              title: const Text('Connect Account'),
+              title: Text(localizations.connectAccount),
               subtitle: const Text('Save your data to the cloud'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const EmailAuthScreen()));
+                // Navigate to sign up for guest users
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EmailAuthScreen(isLogin: false)),
+                );
               },
             ),
           ListTile(
             leading: const Icon(Icons.person_outline),
-            title: const Text('Edit Profile'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            title: Text(localizations.editProfile),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.language, color: AppColors.primary),
+            title: Text(localizations.selectLanguage),
+            onTap: () {
+              Navigator.pop(context);
+              _showLanguageDialog(context, localizations);
+            },
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Log Out', style: TextStyle(color: Colors.red)),
+            title: Text(localizations.logout, style: const TextStyle(color: Colors.red)),
             onTap: () async {
+              Navigator.pop(context);
               bool clearData = false;
               if (userProvider.isGuest) {
                 final result = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Logout Warning'),
-                    content: const Text('You are using a guest account. Your data will be permanently cleared if you logout without connecting an account. Do you wish to continue?'),
+                    title: Text(localizations.warning),
+                    content: Text(localizations.logoutWarning),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
-                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('LOGOUT & CLEAR', style: TextStyle(color: Colors.red))),
+                      TextButton(onPressed: () => Navigator.pop(context, false), child: Text(localizations.cancel)),
+                      TextButton(onPressed: () => Navigator.pop(context, true), child: Text(localizations.logoutClear, style: const TextStyle(color: Colors.red))),
                     ],
                   ),
                 );
                 if (result != true) return;
                 clearData = true;
               }
-              
+
               await userProvider.logout(clearGuestData: clearData);
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-                  (route) => false,
+                      (route) => false,
                 );
               }
             },
           ),
         ],
       ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context, AppLocalizations localizations) {
+    final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(localizations.selectLanguage),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Text('🇬🇧', style: TextStyle(fontSize: 24)),
+                title: Text(localizations.english),
+                trailing: !languageProvider.isSinhala
+                    ? const Icon(Icons.check_circle, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  languageProvider.changeLanguage('en');
+                  Navigator.pop(dialogContext);
+                },
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Text('🇱🇰', style: TextStyle(fontSize: 24)),
+                title: Text(localizations.sinhala),
+                trailing: languageProvider.isSinhala
+                    ? const Icon(Icons.check_circle, color: AppColors.primary)
+                    : null,
+                onTap: () {
+                  languageProvider.changeLanguage('si');
+                  Navigator.pop(dialogContext);
+                },
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

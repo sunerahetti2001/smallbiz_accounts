@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../models/transaction_model.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 
@@ -33,28 +34,35 @@ class _CreditSaleScreenState extends State<CreditSaleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Credit Sale')),
+      appBar: AppBar(title: Text(localizations.creditSale)),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _buildCustomerDetails(),
+            _buildCustomerDetails(localizations),
             const SizedBox(height: 16),
-            _buildItemForm(),
+            _buildItemForm(localizations),
             const SizedBox(height: 16),
-            _buildPaymentSchedule(),
+            _buildPaymentSchedule(localizations),
             const SizedBox(height: 16),
-            _buildSaleDate(),
+            _buildSaleDate(localizations),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: (_items.isEmpty || _isLoading) ? null : _saveTransaction,
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary, padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('RECORD CREDIT SALE'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(localizations.recordSale),
               ),
             ),
           ],
@@ -63,41 +71,75 @@ class _CreditSaleScreenState extends State<CreditSaleScreen> {
     );
   }
 
-  Widget _buildCustomerDetails() {
+  Widget _buildCustomerDetails(AppLocalizations localizations) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(children: [
-          TextFormField(controller: _customerNameController, decoration: const InputDecoration(labelText: 'Customer Name', prefixIcon: Icon(Icons.person))),
+          TextFormField(
+            controller: _customerNameController,
+            decoration: InputDecoration(
+              labelText: localizations.customer,
+              prefixIcon: const Icon(Icons.person),
+            ),
+          ),
           const SizedBox(height: 12),
-          TextFormField(controller: _customerMobileController, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Mobile Number', prefixIcon: Icon(Icons.phone))),
+          TextFormField(
+            controller: _customerMobileController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: localizations.phone,
+              prefixIcon: const Icon(Icons.phone),
+            ),
+          ),
         ]),
       ),
     );
   }
 
-  Widget _buildItemForm() {
+  Widget _buildItemForm(AppLocalizations localizations) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(children: [
-          TextFormField(controller: _itemNameController, decoration: const InputDecoration(labelText: 'Item Name')),
+          TextFormField(
+            controller: _itemNameController,
+            decoration: InputDecoration(labelText: localizations.item),
+          ),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: TextFormField(controller: _itemPriceController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price', prefixText: 'Rs '))),
+            Expanded(
+              child: TextFormField(
+                controller: _itemPriceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: localizations.price,
+                  prefixText: 'Rs ',
+                ),
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: TextFormField(controller: _itemQuantityController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity'))),
+            Expanded(
+              child: TextFormField(
+                controller: _itemQuantityController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: localizations.quantity),
+              ),
+            ),
           ]),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: _addItem, child: const Text('Add Item')),
+          ElevatedButton(
+            onPressed: _addItem,
+            child: Text(localizations.addItem),
+          ),
           if (_items.isNotEmpty) ...[
             const Divider(),
             ..._items.asMap().entries.map((e) {
               final index = e.key;
               final item = e.value;
               return ListTile(
-                title: Text(item['name']), 
-                subtitle: Text('Rs ${item['price']} x ${item['quantity']}'), 
+                title: Text(item['name']),
+                subtitle: Text('Rs ${item['price']} x ${item['quantity']}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -111,30 +153,38 @@ class _CreditSaleScreenState extends State<CreditSaleScreen> {
               );
             }),
             const Divider(),
-            Text('Total: ${CurrencyFormatter.formatLKR(_totalAmount)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text(
+              '${localizations.total}: ${CurrencyFormatter.formatLKR(_totalAmount)}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
           ]
         ]),
       ),
     );
   }
 
-  Widget _buildPaymentSchedule() {
+  Widget _buildPaymentSchedule(AppLocalizations localizations) {
     return Card(
       child: SwitchListTile(
-        title: const Text('Set Due Date'),
+        title: Text(localizations.setDueDate),
         value: _setDueDate,
         onChanged: (v) => setState(() => _setDueDate = v),
       ),
     );
   }
 
-  Widget _buildSaleDate() {
+  Widget _buildSaleDate(AppLocalizations localizations) {
     return Card(
       child: ListTile(
-        title: Text('Date: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
+        title: Text('${localizations.date}: ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
         trailing: const Icon(Icons.calendar_today),
         onTap: () async {
-          final date = await showDatePicker(context: context, initialDate: _selectedDate, firstDate: DateTime(2020), lastDate: DateTime.now());
+          final date = await showDatePicker(
+            context: context,
+            initialDate: _selectedDate,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now(),
+          );
           if (date != null) setState(() => _selectedDate = date);
         },
       ),
@@ -147,9 +197,16 @@ class _CreditSaleScreenState extends State<CreditSaleScreen> {
     if (price > 0 && quantity > 0) {
       setState(() {
         final total = price * quantity;
-        _items.add({'name': _itemNameController.text, 'price': price, 'quantity': quantity, 'total': total});
+        _items.add({
+          'name': _itemNameController.text,
+          'price': price,
+          'quantity': quantity,
+          'total': total,
+        });
         _totalAmount += total;
-        _itemNameController.clear(); _itemPriceController.clear(); _itemQuantityController.clear();
+        _itemNameController.clear();
+        _itemPriceController.clear();
+        _itemQuantityController.clear();
       });
     }
   }
@@ -162,6 +219,7 @@ class _CreditSaleScreenState extends State<CreditSaleScreen> {
   }
 
   Future<void> _saveTransaction() async {
+    final localizations = AppLocalizations.of(context);
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
@@ -183,7 +241,9 @@ class _CreditSaleScreenState extends State<CreditSaleScreen> {
         await Provider.of<TransactionProvider>(context, listen: false).addTransaction(transaction, userId);
         if (mounted) Navigator.pop(context, true);
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${localizations.error}: $e')),
+        );
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import 'income_screen.dart';
 import 'expense_screen.dart';
@@ -10,9 +11,11 @@ class TransactionTypeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Transaction'),
+        title: Text(localizations.addTransaction),
         backgroundColor: Colors.white,
       ),
       body: Padding(
@@ -20,9 +23,9 @@ class TransactionTypeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Select Transaction Type',
-              style: TextStyle(
+            Text(
+              localizations.selectTransactionType,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -31,8 +34,8 @@ class TransactionTypeScreen extends StatelessWidget {
             _buildTypeCard(
               context,
               icon: Icons.arrow_downward,
-              title: 'INCOME',
-              subtitle: 'Money coming in (sales, payments)',
+              title: localizations.income.toUpperCase(),
+              subtitle: localizations.incomeDescription,
               color: AppColors.income,
               onTap: () {
                 Navigator.push(
@@ -46,8 +49,8 @@ class TransactionTypeScreen extends StatelessWidget {
             _buildTypeCard(
               context,
               icon: Icons.arrow_upward,
-              title: 'EXPENSE',
-              subtitle: 'Money going out (purchases, bills)',
+              title: localizations.expense.toUpperCase(),
+              subtitle: localizations.expenseDescription,
               color: AppColors.expense,
               onTap: () {
                 Navigator.push(
@@ -61,8 +64,8 @@ class TransactionTypeScreen extends StatelessWidget {
             _buildTypeCard(
               context,
               icon: Icons.receipt,
-              title: 'CREDIT SALE',
-              subtitle: 'Customer buys on credit',
+              title: localizations.creditSale.toUpperCase(),
+              subtitle: localizations.creditSaleDescription,
               color: AppColors.credit,
               onTap: () {
                 Navigator.push(
@@ -76,8 +79,8 @@ class TransactionTypeScreen extends StatelessWidget {
             _buildTypeCard(
               context,
               icon: Icons.payment,
-              title: 'CREDIT PAYMENT',
-              subtitle: 'Customer pays back credit',
+              title: localizations.creditPayment.toUpperCase(),
+              subtitle: localizations.creditPaymentDescription,
               color: AppColors.income,
               onTap: () {
                 Navigator.push(

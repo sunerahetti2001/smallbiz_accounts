@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../models/transaction_model.dart';
@@ -31,10 +32,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
     });
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final transactionProvider = Provider.of<TransactionProvider>(
-      context,
-      listen: false,
-    );
+    final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
 
     if (userProvider.user != null) {
       await transactionProvider.loadTransactions(userProvider.user!.id);
@@ -122,9 +120,20 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(localizations.loading),
+            ],
+          ),
+        ),
       );
     }
 
@@ -134,26 +143,16 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.insights,
-                size: 64,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.insights, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               Text(
-                'No data for analysis',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                localizations.noDataAnalysis,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
               const SizedBox(height: 8),
               Text(
-                'Add some transactions first',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                ),
+                localizations.addFirstTransaction,
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
               ),
             ],
           ),
@@ -186,9 +185,9 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '3-Month Analysis',
-                        style: TextStyle(
+                      Text(
+                        localizations.threeMonthAnalysis,
+                        style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -196,7 +195,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Last 3 months performance review',
+                        localizations.last3Months,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.white.withValues(alpha: 0.8),
@@ -212,12 +211,11 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   const SizedBox(height: 16),
-                  // Summary Cards
                   Row(
                     children: [
                       Expanded(
                         child: StatCard(
-                          title: 'Total Income',
+                          title: localizations.totalIncome,
                           value: totalIncome,
                           icon: Icons.trending_up,
                           color: AppColors.income,
@@ -227,7 +225,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: StatCard(
-                          title: 'Total Expense',
+                          title: localizations.totalExpense,
                           value: totalExpense,
                           icon: Icons.trending_down,
                           color: AppColors.expense,
@@ -241,7 +239,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                     children: [
                       Expanded(
                         child: StatCard(
-                          title: 'Net Profit',
+                          title: localizations.netProfit,
                           value: totalProfit,
                           icon: Icons.trending_up,
                           color: totalProfit >= 0 ? AppColors.success : AppColors.error,
@@ -251,7 +249,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: StatCard(
-                          title: 'Credit Given',
+                          title: localizations.creditGiven,
                           value: totalCredit,
                           icon: Icons.receipt,
                           color: AppColors.credit,
@@ -261,15 +259,15 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Monthly Breakdown',
-                    style: TextStyle(
+                  Text(
+                    localizations.monthlyBreakdown,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ..._monthlyData.map((month) => _buildMonthlyCard(month)),
+                  ..._monthlyData.map((month) => _buildMonthlyCard(month, localizations)),
                 ]),
               ),
             ),
@@ -279,7 +277,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
     );
   }
 
-  Widget _buildMonthlyCard(Map<String, dynamic> month) {
+  Widget _buildMonthlyCard(Map<String, dynamic> month, AppLocalizations localizations) {
     double profit = month['profit'] as double;
     bool isProfit = profit >= 0;
     double margin = month['margin'] as double;
@@ -331,7 +329,7 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${margin.toStringAsFixed(1)}% margin',
+                        '${margin.toStringAsFixed(1)}% ${localizations.margin}',
                         style: TextStyle(
                           fontSize: 11,
                           color: isProfit ? AppColors.success : AppColors.error,
@@ -350,11 +348,8 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Income',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                        ),
+                        localizations.income,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -373,11 +368,8 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Expense',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                        ),
+                        localizations.expense,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -396,11 +388,8 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Profit',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                        ),
+                        localizations.profit,
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -425,11 +414,8 @@ class _ThreeMonthAnalysisScreenState extends State<ThreeMonthAnalysisScreen> {
                   const Icon(Icons.receipt, size: 16, color: AppColors.credit),
                   const SizedBox(width: 8),
                   Text(
-                    'Credit Outstanding: ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    '${localizations.creditOutstanding}: ',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                   Text(
                     CurrencyFormatter.formatLKR(credit),

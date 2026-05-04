@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/transaction_model.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import 'income_screen.dart';
@@ -33,6 +34,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     if (_selectedType != null) {
       Widget screen;
       switch (_selectedType!) {
@@ -53,14 +56,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Transaction')),
+      appBar: AppBar(title: Text(localizations.addTransaction)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Select Transaction Type', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(localizations.selectTransactionType, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text('Choose the type of transaction you want to record', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
               const SizedBox(height: 32),
@@ -72,8 +75,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildStatItem('Balance', CurrencyFormatter.formatCompact(provider.currentBalance), AppColors.primary),
-                          _buildStatItem('Credit', CurrencyFormatter.formatCompact(provider.creditOutstanding), AppColors.credit),
+                          _buildStatItem(localizations.balance, CurrencyFormatter.formatCompact(provider.currentBalance), AppColors.primary),
+                          _buildStatItem(localizations.creditOutstanding, CurrencyFormatter.formatCompact(provider.creditOutstanding), AppColors.credit),
                         ],
                       ),
                     ),
@@ -87,10 +90,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                   children: [
-                    _buildTypeCard('Income', Icons.arrow_downward, AppColors.income, 'Money coming in', () => _navigateToScreen(const IncomeScreen())),
-                    _buildTypeCard('Expense', Icons.arrow_upward, AppColors.expense, 'Money going out', () => _navigateToScreen(const ExpenseScreen())),
-                    _buildTypeCard('Credit Sale', Icons.receipt, AppColors.credit, 'Customer buys on credit', () => _navigateToScreen(const CreditSaleScreen())),
-                    _buildTypeCard('Credit Payment', Icons.payment, AppColors.income, 'Customer pays back', () => _navigateToScreen(const CreditPaymentScreen())),
+                    _buildTypeCard(localizations.income, Icons.arrow_downward, AppColors.income, localizations.incomeDescription, () => _navigateToScreen(const IncomeScreen())),
+                    _buildTypeCard(localizations.expense, Icons.arrow_upward, AppColors.expense, localizations.expenseDescription, () => _navigateToScreen(const ExpenseScreen())),
+                    _buildTypeCard(localizations.creditSale, Icons.receipt, AppColors.credit, localizations.creditSaleDescription, () => _navigateToScreen(const CreditSaleScreen())),
+                    _buildTypeCard(localizations.creditPayment, Icons.payment, AppColors.income, localizations.creditPaymentDescription, () => _navigateToScreen(const CreditPaymentScreen())),
                   ],
                 ),
               ),

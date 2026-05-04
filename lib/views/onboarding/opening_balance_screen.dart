@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../utils/constants.dart';
 import 'business_name_screen.dart';
@@ -23,13 +24,15 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Opening Balance'),
+        title: Text(localizations.openingBalance),
       ),
       body: SafeArea(
         child: Padding(
@@ -37,25 +40,25 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Let\'s set up your starting cash',
-                style: TextStyle(
+              Text(
+                localizations.setupStartingCash,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Your account balance is currently 0. Add your initial cash to get started.',
+                localizations.setupStartingCashDesc,
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 32),
-              const Text(
-                'Account',
-                style: TextStyle(fontWeight: FontWeight.w500),
+              Text(
+                localizations.account,
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               Container(
@@ -82,16 +85,16 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Opening Balance *',
-                style: TextStyle(fontWeight: FontWeight.w500),
+              Text(
+                '${localizations.openingBalance} *',
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _balanceController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  hintText: 'Enter opening balance',
+                  hintText: localizations.enterOpeningBalance,
                   prefixText: 'Rs ',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -119,7 +122,7 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
                       style: TextButton.styleFrom(
                         minimumSize: const Size(double.infinity, 56),
                       ),
-                      child: const Text('Skip'),
+                      child: Text(localizations.skip),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -139,7 +142,7 @@ class _OpeningBalanceScreenState extends State<OpeningBalanceScreen> {
                           ),
                         );
                       },
-                      child: const Text('Add'),
+                      child: Text(localizations.add),
                     ),
                   ),
                 ],

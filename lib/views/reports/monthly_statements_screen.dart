@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
 import '../../models/transaction_model.dart';
@@ -32,10 +33,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
     });
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final transactionProvider = Provider.of<TransactionProvider>(
-      context,
-      listen: false,
-    );
+    final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
 
     if (userProvider.user != null) {
       await transactionProvider.loadTransactions(userProvider.user!.id);
@@ -84,9 +82,9 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
     List<Map<String, dynamic>> statements = monthlyData.values.toList();
     statements.sort((a, b) {
       if (a['year'] != b['year']) {
-        return b['year'].compareTo(a['year']);
+        return (b['year'] as int).compareTo(a['year'] as int);
       }
-      return b['month'].compareTo(a['month']);
+      return (b['month'] as int).compareTo(a['month'] as int);
     });
 
     setState(() {
@@ -103,15 +101,13 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
     return months[month - 1];
   }
 
-  // ==================== PDF GENERATION METHODS ====================
-
   Future<void> _generateAndShowSummaryPdf(Map<String, dynamic> statement) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.user!;
+    final localizations = AppLocalizations.of(context);
 
     final transactions = statement['transactions'] as List<TransactionModel>;
 
-    // Calculate income breakdown
     Map<String, double> incomeBreakdown = {};
     Map<String, double> expenseBreakdown = {};
 
@@ -123,7 +119,6 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
       }
     }
 
-    // Get pending credits
     final pendingCredits = transactions.where((t) =>
     t.type == TransactionType.creditSale && !t.isPaid
     ).toList();
@@ -133,11 +128,19 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
     final startDate = DateTime(year, month, 1);
     final endDate = DateTime(year, month + 1, 0);
 
-    // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(localizations.pleaseWait, style: const TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
     );
 
     try {
@@ -163,14 +166,17 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
         await PdfExportService.showPdfPreview(
           context: context,
           pdfFile: pdfFile,
-          title: 'Monthly Statement - ${statement['monthName']} ${statement['year']}',
+          title: '${localizations.monthlyStatement} - ${statement['monthName']} ${statement['year']}',
         );
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating PDF: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('${localizations.error}: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -179,6 +185,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
   Future<void> _generateAndShowDetailedPdf(Map<String, dynamic> statement) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.user!;
+    final localizations = AppLocalizations.of(context);
 
     final transactions = statement['transactions'] as List<TransactionModel>;
     final year = statement['year'] as int;
@@ -189,7 +196,16 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(localizations.pleaseWait, style: const TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
     );
 
     try {
@@ -207,26 +223,38 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
         await PdfExportService.showPdfPreview(
           context: context,
           pdfFile: pdfFile,
-          title: 'Detailed Report - ${statement['monthName']} ${statement['year']}',
+          title: '${localizations.details} - ${statement['monthName']} ${statement['year']}',
         );
       }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating PDF: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('${localizations.error}: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
   }
 
-  // ==================== BUILD METHODS ====================
-
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(localizations.loading),
+            ],
+          ),
+        ),
       );
     }
 
@@ -236,26 +264,16 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.description_outlined,
-                size: 64,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.description_outlined, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
               Text(
-                'No statements available',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
+                localizations.noStatements,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               ),
               const SizedBox(height: 8),
               Text(
-                'Add some transactions first',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                ),
+                localizations.addFirstTransaction,
+                style: TextStyle(fontSize: 14, color: Colors.grey[500]),
               ),
             ],
           ),
@@ -276,9 +294,9 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Statements',
-                        style: TextStyle(
+                      Text(
+                        localizations.statements,
+                        style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -302,7 +320,6 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   const SizedBox(height: 16),
-                  // Generate New Statement Card
                   Container(
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
@@ -322,20 +339,16 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                                 color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              child: const Icon(
-                                Icons.file_copy,
-                                color: Colors.white,
-                                size: 28,
-                              ),
+                              child: const Icon(Icons.file_copy, color: Colors.white, size: 28),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Generate Statement',
-                                    style: TextStyle(
+                                  Text(
+                                    localizations.generateStatement,
+                                    style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
@@ -357,7 +370,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () => _showGenerateDialog(),
+                            onPressed: () => _showGenerateDialog(localizations),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: AppColors.primary,
@@ -366,11 +379,9 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            child: const Text(
-                              'Generate New Statement',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
+                            child: Text(
+                              localizations.generateNewStatement,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),
@@ -378,15 +389,15 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Previous Statements',
-                    style: TextStyle(
+                  Text(
+                    localizations.previousStatements,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ..._monthlyStatements.map((statement) => _buildStatementCard(statement)),
+                  ..._monthlyStatements.map((statement) => _buildStatementCard(statement, localizations)),
                 ]),
               ),
             ),
@@ -396,7 +407,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
     );
   }
 
-  Widget _buildStatementCard(Map<String, dynamic> statement) {
+  Widget _buildStatementCard(Map<String, dynamic> statement, AppLocalizations localizations) {
     double profit = (statement['income'] as double) - (statement['expense'] as double);
     bool isProfit = profit >= 0;
     String monthYear = '${statement['monthName']} ${statement['year']}';
@@ -439,17 +450,11 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                     children: [
                       Text(
                         monthYear,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        '$transactionCount transactions',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        '$transactionCount ${localizations.transactions}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -463,7 +468,7 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    isProfit ? 'Profit' : 'Loss',
+                    isProfit ? localizations.profit : localizations.loss,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -476,57 +481,42 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                _buildMiniStat(
-                  'Income',
-                  statement['income'],
-                  AppColors.income,
-                ),
+                _buildMiniStat(localizations.income, statement['income'], AppColors.income),
                 const SizedBox(width: 16),
-                _buildMiniStat(
-                  'Expense',
-                  statement['expense'],
-                  AppColors.expense,
-                ),
+                _buildMiniStat(localizations.expense, statement['expense'], AppColors.expense),
                 const SizedBox(width: 16),
-                _buildMiniStat(
-                  'Profit',
-                  profit,
-                  isProfit ? AppColors.success : AppColors.error,
-                ),
+                _buildMiniStat(localizations.profit, profit, isProfit ? AppColors.success : AppColors.error),
               ],
             ),
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: (statement['income'] / (statement['income'] + statement['expense'])).clamp(0.0, 1.0),
+                value: ((statement['income'] as double) /
+                    ((statement['income'] as double) + (statement['expense'] as double)))
+                    .clamp(0.0, 1.0),
                 backgroundColor: AppColors.expense.withValues(alpha: 0.3),
                 color: AppColors.income,
                 minHeight: 6,
               ),
             ),
             const SizedBox(height: 16),
-            // NEW BUTTONS - SUMMARY and DETAILS
             Row(
               children: [
                 Expanded(
                   child: TextButton.icon(
                     onPressed: () => _generateAndShowSummaryPdf(statement),
                     icon: const Icon(Icons.picture_as_pdf, size: 18),
-                    label: const Text('Summary'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                    ),
+                    label: Text(localizations.summary),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.primary),
                   ),
                 ),
                 Expanded(
                   child: TextButton.icon(
                     onPressed: () => _generateAndShowDetailedPdf(statement),
                     icon: const Icon(Icons.receipt_long, size: 18),
-                    label: const Text('Details'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.secondary,
-                    ),
+                    label: Text(localizations.details),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.secondary),
                   ),
                 ),
               ],
@@ -542,36 +532,26 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey[600],
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
           const SizedBox(height: 4),
           Text(
             CurrencyFormatter.formatCompact(value),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
     );
   }
 
-  void _showGenerateDialog() {
+  void _showGenerateDialog(AppLocalizations localizations) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Generate Statement'),
+        title: Text(localizations.generateStatement),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Select period:'),
+            Text(localizations.selectPeriod),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -579,9 +559,9 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                   child: OutlinedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      _showDownloadSuccess('Monthly Statement');
+                      _showDownloadSuccess(localizations.monthlyStatement, localizations);
                     },
-                    child: const Text('This Month'),
+                    child: Text(localizations.thisMonth),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -589,9 +569,9 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
                   child: OutlinedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      _showDownloadSuccess('Quarterly Statement');
+                      _showDownloadSuccess(localizations.quarterlyStatement, localizations);
                     },
-                    child: const Text('Quarter'),
+                    child: Text('Quarter'),
                   ),
                 ),
               ],
@@ -600,9 +580,9 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
             OutlinedButton(
               onPressed: () {
                 Navigator.pop(context);
-                _showDownloadSuccess('Yearly Statement');
+                _showDownloadSuccess(localizations.yearlyStatement, localizations);
               },
-              child: const Text('Yearly'),
+              child: Text('Yearly'),
             ),
           ],
         ),
@@ -610,10 +590,10 @@ class _MonthlyStatementsScreenState extends State<MonthlyStatementsScreen> {
     );
   }
 
-  void _showDownloadSuccess(String format) {
+  void _showDownloadSuccess(String format, AppLocalizations localizations) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$format generation started'),
+        content: Text(localizations.statementGenerated),
         backgroundColor: AppColors.success,
         duration: const Duration(seconds: 2),
       ),

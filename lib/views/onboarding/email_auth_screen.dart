@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
+import '../home/home_screen.dart';
 import 'basic_info_screen.dart';
 
 class EmailAuthScreen extends StatefulWidget {
@@ -33,34 +35,31 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
 
     try {
       if (_isLogin) {
+        // LOGIN flow
         await userProvider.signInWithEmail(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
+        _handlePostAuth(userProvider);
       } else {
+        // SIGN UP flow
         await userProvider.signUpWithEmail(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
-      }
-
-      if (mounted) {
-        if (userProvider.user == null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const BasicInfoScreen()),
-          );
-        } else {
-          // Returning user, auto-loader in main.dart will handle navigation
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
+        _handlePostAuth(userProvider);
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = e.toString();
+        if (errorMessage.contains('] ')) {
+          errorMessage = errorMessage.split('] ').last;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().contains('] ') ? e.toString().split('] ').last : e.toString()),
+            content: Text(errorMessage),
             backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -72,22 +71,23 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
   Future<void> _continueWithGoogle() async {
     setState(() => _isLoading = true);
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+
     try {
       await userProvider.signInWithGoogle();
-      if (mounted) {
-        if (userProvider.user == null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const BasicInfoScreen()),
-          );
-        } else {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
-      }
+
+      if (!mounted) return;
+
+      debugPrint('EmailAuthScreen: Google auth complete. isOnboarded=${userProvider.isOnboarded}, needsOnboarding=${userProvider.needsOnboarding}');
+
+      _handlePostAuth(userProvider);
     } catch (e) {
       if (mounted) {
+        debugPrint('Google Sign In error: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign In failed: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Google Sign In failed. Please try again.'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
@@ -95,11 +95,49 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
     }
   }
 
+  void _handlePostAuth(UserProvider userProvider) {
+    debugPrint('_handlePostAuth: isLogin=$_isLogin, isOnboarded=${userProvider.isOnboarded}, needsOnboarding=${userProvider.needsOnboarding}, isGuest=${userProvider.isGuest}');
+
+    if (_isLogin) {
+      // LOGIN: If user exists in SQLite -> Home, else -> Onboarding
+      if (userProvider.isOnboarded) {
+        debugPrint('Login: User onboarded -> HomeScreen');
+        _navigateToHome();
+      } else if (userProvider.needsOnboarding) {
+        debugPrint('Login: User needs onboarding -> BasicInfoScreen');
+        _navigateToOnboarding();
+      } else {
+        // No change - stay on screen
+        debugPrint('Login: No state change');
+      }
+    } else {
+      // SIGN UP: Always go to onboarding
+      debugPrint('SignUp: Going to onboarding');
+      _navigateToOnboarding();
+    }
+  }
+
+  void _navigateToHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+          (route) => false,
+    );
+  }
+
+  void _navigateToOnboarding() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const BasicInfoScreen()),
+          (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isLogin ? 'Login' : 'Create Account'),
+        title: Text(_isLogin ? localizations.login : localizations.signUp),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -111,8 +149,14 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
               children: [
                 const SizedBox(height: 10),
                 Text(
-                  _isLogin ? 'Welcome Back!' : 'Start Your Journey',
+                  _isLogin ? localizations.welcomeBack : localizations.startJourney,
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _isLogin ? 'Sign in to access your account' : 'Create an account to get started',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
@@ -120,7 +164,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: 'Email',
+                    labelText: localizations.email,
                     prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                   ),
@@ -131,7 +175,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                   controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: localizations.password,
                     prefixIcon: const Icon(Icons.lock_outline),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                   ),
@@ -144,22 +188,31 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                     minimumSize: const Size(double.infinity, 56),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(_isLogin ? 'LOGIN' : 'SIGN UP'),
+                  child: _isLoading
+                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text(_isLogin ? localizations.login.toUpperCase() : localizations.signUp.toUpperCase()),
                 ),
                 const SizedBox(height: 20),
-                const Row(
+                Row(
                   children: [
-                    Expanded(child: Divider()),
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('OR', style: TextStyle(color: Colors.grey))),
-                    Expanded(child: Divider()),
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(localizations.or, style: const TextStyle(color: Colors.grey)),
+                    ),
+                    const Expanded(child: Divider()),
                   ],
                 ),
                 const SizedBox(height: 20),
-                _buildGoogleButton(),
+                _buildGoogleButton(localizations),
                 const SizedBox(height: 30),
                 TextButton(
-                  onPressed: () => setState(() => _isLogin = !_isLogin),
-                  child: Text(_isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"),
+                  onPressed: () {
+                    setState(() {
+                      _isLogin = !_isLogin;
+                    });
+                  },
+                  child: Text(_isLogin ? localizations.dontHaveAccount : localizations.alreadyHaveAccount),
                 ),
               ],
             ),
@@ -169,7 +222,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
     );
   }
 
-  Widget _buildGoogleButton() {
+  Widget _buildGoogleButton(AppLocalizations localizations) {
     return OutlinedButton(
       onPressed: _isLoading ? null : _continueWithGoogle,
       style: OutlinedButton.styleFrom(
@@ -180,9 +233,27 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.login, color: Color(0xFF4285F4)),
+          Image.asset(
+            'assets/icons/google_logo.png',
+            width: 24,
+            height: 24,
+            errorBuilder: (context, error, stackTrace) => Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF4285F4), width: 2),
+              ),
+              child: const Center(
+                child: Text('G', style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+            ),
+          ),
           const SizedBox(width: 12),
-          Text(_isLogin ? 'Login with Google' : 'Sign up with Google', style: const TextStyle(color: Colors.black87)),
+          Text(
+            _isLogin ? localizations.continueWithGoogle : localizations.signUpWithGoogle,
+            style: const TextStyle(color: Colors.black87),
+          ),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/colors.dart';
 
 class BottomNav extends StatelessWidget {
@@ -13,6 +14,8 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -33,31 +36,31 @@ class BottomNav extends StatelessWidget {
               _buildNavItem(
                 icon: Icons.home_outlined,
                 activeIcon: Icons.home,
-                label: 'Home',
+                label: localizations.home,
                 index: 0,
               ),
               _buildNavItem(
                 icon: Icons.category_outlined,
                 activeIcon: Icons.category,
-                label: 'Categories',
+                label: localizations.categories,
                 index: 1,
               ),
               _buildNavItem(
                 icon: Icons.compare_arrows_outlined,
                 activeIcon: Icons.compare_arrows,
-                label: 'Compare',
+                label: localizations.compare,
                 index: 2,
               ),
               _buildNavItem(
                 icon: Icons.timeline_outlined,
                 activeIcon: Icons.timeline,
-                label: 'Analysis',
+                label: localizations.analysis,
                 index: 3,
               ),
               _buildNavItem(
                 icon: Icons.description_outlined,
                 activeIcon: Icons.description,
-                label: 'Statements',
+                label: localizations.statements,
                 index: 4,
               ),
             ],

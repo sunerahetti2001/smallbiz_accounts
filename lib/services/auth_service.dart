@@ -10,32 +10,45 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
+      debugPrint('AuthService.signInWithGoogle: Starting Google Sign-In');
+
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
+
+      if (googleUser == null) {
+        debugPrint('AuthService.signInWithGoogle: User cancelled sign-in');
+        return null;
+      }
+
+      debugPrint('AuthService.signInWithGoogle: Got Google account: ${googleUser.email}');
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      return await _auth.signInWithCredential(credential);
+      debugPrint('AuthService.signInWithGoogle: Signing in to Firebase');
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      debugPrint('AuthService.signInWithGoogle: Firebase sign-in successful');
+
+      return userCredential;
     } catch (e) {
       debugPrint("Error signing in with Google: $e");
-      // Check if it's a "web client ID" error
-      if (e.toString().contains("webClientId")) {
-        debugPrint("Please add web client ID to GoogleSignIn configuration");
-      }
-      return null;
+      rethrow;
     }
   }
 
   Future<UserCredential?> signUpWithEmail(String email, String password) async {
     try {
-      return await _auth.createUserWithEmailAndPassword(
+      debugPrint('AuthService.signUpWithEmail: Creating account for $email');
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+      debugPrint('AuthService.signUpWithEmail: Success');
+      return credential;
     } catch (e) {
       debugPrint("Error signing up with email: $e");
       rethrow;
@@ -44,10 +57,13 @@ class AuthService {
 
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      debugPrint('AuthService.signInWithEmail: Signing in $email');
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+      debugPrint('AuthService.signInWithEmail: Success');
+      return credential;
     } catch (e) {
       debugPrint("Error signing in with email: $e");
       rethrow;
@@ -56,8 +72,12 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
+      debugPrint('AuthService.signOut: Signing out');
+      if (_googleSignIn.currentUser != null) {
+        await _googleSignIn.signOut();
+      }
       await _auth.signOut();
+      debugPrint('AuthService.signOut: Complete');
     } catch (e) {
       debugPrint("Error signing out: $e");
     }

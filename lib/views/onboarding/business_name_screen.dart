@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
-import '../../providers/category_provider.dart';
 import '../../services/sqlite_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../home/home_screen.dart';
 
@@ -30,26 +30,36 @@ class _BusinessNameScreenState extends State<BusinessNameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Business Details')),
+      appBar: AppBar(title: Text(localizations.businessDetails)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('What\'s your business called?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(localizations.businessNameQuestion, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(localizations.businessNameDesc, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
               const SizedBox(height: 32),
-              const Text('Business Name', style: TextStyle(fontWeight: FontWeight.w500)),
+              Text(localizations.businessName, style: const TextStyle(fontWeight: FontWeight.w500)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _businessController,
-                decoration: InputDecoration(hintText: 'e.g., My Store', border: OutlineInputBorder(borderRadius: BorderRadius.circular(16))),
+                decoration: InputDecoration(
+                  hintText: localizations.businessNameHint,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                textCapitalization: TextCapitalization.words,
               ),
               const Spacer(),
               ElevatedButton(
                 onPressed: _isLoading ? null : _completeSetup,
-                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Complete Setup'),
+                child: _isLoading
+                    ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(localizations.completeSetup),
               ),
             ],
           ),
@@ -59,8 +69,15 @@ class _BusinessNameScreenState extends State<BusinessNameScreen> {
   }
 
   Future<void> _completeSetup() async {
-    if (_businessController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter business name'), backgroundColor: AppColors.error));
+    final localizations = AppLocalizations.of(context);
+
+    if (_businessController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(localizations.pleaseEnterBusinessName),
+          backgroundColor: AppColors.error,
+        ),
+      );
       return;
     }
 
@@ -68,23 +85,40 @@ class _BusinessNameScreenState extends State<BusinessNameScreen> {
 
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
+
       await userProvider.createUser(
         name: widget.userName,
-        businessName: _businessController.text,
+        businessName: _businessController.text.trim(),
         currency: widget.currency.split(' ')[0],
         openingBalance: widget.openingBalance,
         accountType: widget.accountType,
       );
 
+      if (userProvider.user == null) {
+        throw Exception('User creation failed');
+      }
+
+      // Initialize default categories for new user
       final userId = userProvider.user!.id;
       final sqlite = SqliteService();
       await sqlite.initDefaultCategories(userId);
 
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const HomeScreen()), (route) => false);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${localizations.error}: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

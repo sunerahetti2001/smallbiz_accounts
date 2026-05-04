@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # State Management
   provider: ^6.1.1
@@ -26,7 +28,7 @@ dependencies:
   # Utilities
   shared_preferences: ^2.2.2
   uuid: ^4.3.3
-  intl: ^0.18.1
+  intl: any
 
   # UI
   flutter_svg: ^2.0.9
@@ -44,3 +46,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/lang/

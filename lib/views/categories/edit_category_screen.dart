@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/category_model.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 
 class EditCategoryScreen extends StatefulWidget {
@@ -28,18 +29,24 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Category')),
+      appBar: AppBar(title: Text(localizations.editCategory)),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            TextFormField(controller: _nameController, decoration: const InputDecoration(labelText: 'Category Name'), validator: (v) => (v == null || v.isEmpty) ? 'Enter name' : null),
+            TextFormField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: localizations.categoryName),
+              validator: (v) => (v == null || v.isEmpty) ? localizations.pleaseEnterName : null,
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _isLoading ? null : _saveCategory,
-              child: _isLoading ? const CircularProgressIndicator() : const Text('SAVE CHANGES'),
+              child: _isLoading ? const CircularProgressIndicator() : Text(localizations.saveChanges),
             ),
           ],
         ),
@@ -49,6 +56,7 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
 
   Future<void> _saveCategory() async {
     if (_formKey.currentState!.validate()) {
+      final localizations = AppLocalizations.of(context);
       setState(() => _isLoading = true);
       try {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -57,7 +65,9 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
         await Provider.of<CategoryProvider>(context, listen: false).updateCategory(updated, userId);
         if (mounted) Navigator.pop(context, true);
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${localizations.error}: $e')),
+        );
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }

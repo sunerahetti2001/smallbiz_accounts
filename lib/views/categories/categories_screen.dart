@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/category_model.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/user_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
 import '../../widgets/gradient_background.dart';
 import 'add_category_screen.dart';
@@ -34,6 +35,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<CategoryProvider>(context);
+    final localizations = AppLocalizations.of(context);
+
     return Scaffold(
       body: Column(
         children: [
@@ -44,35 +47,57 @@ class _CategoriesScreenState extends State<CategoriesScreen> with SingleTickerPr
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Categories', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text(localizations.categories, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
                   const SizedBox(height: 8),
-                  Text('Manage your income and expense categories', style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.8))),
+                  Text(localizations.manageCategories, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.8))),
                 ],
               ),
             ),
           ),
-          TabBar(controller: _tabController, indicatorColor: AppColors.primary, labelColor: AppColors.primary, unselectedLabelColor: AppColors.textSecondary, tabs: const [Tab(text: 'EXPENSE'), Tab(text: 'INCOME')]),
+          TabBar(
+            controller: _tabController,
+            indicatorColor: AppColors.primary,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondary,
+            tabs: [
+              Tab(text: localizations.expense.toUpperCase()),
+              Tab(text: localizations.income.toUpperCase()),
+            ],
+          ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildCategoryList(categories: provider.expenseCategories, type: CategoryType.expense),
-                _buildCategoryList(categories: provider.incomeCategories, type: CategoryType.income),
+                _buildCategoryList(categories: provider.expenseCategories, type: CategoryType.expense, localizations: localizations),
+                _buildCategoryList(categories: provider.incomeCategories, type: CategoryType.income, localizations: localizations),
               ],
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddCategoryScreen(type: _tabController.index == 0 ? CategoryType.expense : CategoryType.income))).then((_) => _loadCategories()),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AddCategoryScreen(
+              type: _tabController.index == 0 ? CategoryType.expense : CategoryType.income,
+            ),
+          ),
+        ).then((_) => _loadCategories()),
         backgroundColor: AppColors.secondary,
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _buildCategoryList({required List<CategoryModel> categories, required CategoryType type}) {
-    if (categories.isEmpty) return const Center(child: Text('No categories yet'));
+  Widget _buildCategoryList({
+    required List<CategoryModel> categories,
+    required CategoryType type,
+    required AppLocalizations localizations,
+  }) {
+    if (categories.isEmpty) {
+      return Center(child: Text(localizations.noCategories));
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: categories.length,
@@ -82,8 +107,13 @@ class _CategoriesScreenState extends State<CategoriesScreen> with SingleTickerPr
           child: ListTile(
             leading: Text(category.icon, style: const TextStyle(fontSize: 24)),
             title: Text(category.name),
-            subtitle: Text(category.isDefault ? 'Default' : 'Custom'),
-            trailing: category.isDefault ? null : IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteCategory(category)),
+            subtitle: Text(category.isDefault ? localizations.defaultCategory : localizations.customCategory),
+            trailing: category.isDefault
+                ? null
+                : IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => _deleteCategory(category),
+            ),
           ),
         );
       },
