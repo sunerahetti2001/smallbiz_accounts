@@ -98,17 +98,16 @@ class _BusinessNameScreenState extends State<BusinessNameScreen> {
         throw Exception('User creation failed');
       }
 
-      // Initialize default categories for new user
       final userId = userProvider.user!.id;
       final sqlite = SqliteService();
       await sqlite.initDefaultCategories(userId);
 
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-        );
-      }
+      if (!mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (route) => false,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

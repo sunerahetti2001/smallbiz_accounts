@@ -127,7 +127,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: color.withValues(alpha: 0.1),
+                backgroundColor: color.withOpacity(0.1),
                 child: Icon(icon, color: color, size: 28),
               ),
               const SizedBox(height: 8),
@@ -143,11 +143,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   void _navigateToScreen(Widget screen) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen)).then((_) {
-      if (mounted) {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        if (userProvider.user != null) {
-          Provider.of<TransactionProvider>(context, listen: false).loadTransactions(userProvider.user!.id);
-        }
+      if (!mounted) return;
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      if (userProvider.user != null) {
+        Provider.of<TransactionProvider>(context, listen: false).loadTransactions(userProvider.user!.id);
       }
     });
   }

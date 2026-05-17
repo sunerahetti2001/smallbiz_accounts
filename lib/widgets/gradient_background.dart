@@ -13,6 +13,9 @@ class GradientBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -26,9 +29,9 @@ class GradientBackground extends StatelessWidget {
           ],
         ),
         borderRadius: hasBottomRadius
-            ? const BorderRadius.only(
-          bottomLeft: Radius.circular(48),
-          bottomRight: Radius.circular(48),
+            ? BorderRadius.only(
+          bottomLeft: Radius.circular(isSmallScreen ? 36 : 48),
+          bottomRight: Radius.circular(isSmallScreen ? 36 : 48),
         )
             : null,
       ),

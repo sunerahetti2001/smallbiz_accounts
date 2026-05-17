@@ -3,6 +3,7 @@ import '../../../models/transaction_model.dart';
 import '../../../utils/colors.dart';
 import '../../../utils/currency_formatter.dart';
 import '../../../widgets/transaction_item.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RecentTransactions extends StatelessWidget {
   final Map<String, List<TransactionModel>> groupedTransactions;
@@ -16,6 +17,7 @@ class RecentTransactions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     final sortedKeys = groupedTransactions.keys.toList()
       ..sort((a, b) => b.compareTo(a));
 
@@ -39,20 +41,13 @@ class RecentTransactions extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No transactions yet',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[600],
-              ),
+              localizations.noTransactionsYet,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
-              'Tap + to add your first transaction',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              localizations.tapToAddFirst,
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -66,23 +61,11 @@ class RecentTransactions extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Recent Activity',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text(localizations.recentActivity, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               TextButton(
                 onPressed: onViewAll,
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                child: const Text(
-                  'View All',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                child: Text(localizations.viewAll, style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -94,19 +77,14 @@ class RecentTransactions extends StatelessWidget {
           itemBuilder: (context, index) {
             final dateKey = sortedKeys[index];
             final transactions = groupedTransactions[dateKey]!;
-
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
                   child: Text(
-                    _formatDate(dateKey),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                    ),
+                    _formatDate(dateKey, localizations),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[600]),
                   ),
                 ),
                 ...transactions.take(3).map((t) => Padding(
@@ -117,12 +95,8 @@ class RecentTransactions extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(left: 16, top: 4, bottom: 8),
                     child: Text(
-                      '+${transactions.length - 3} more transactions',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                        fontStyle: FontStyle.italic,
-                      ),
+                      localizations.moreTransactions.replaceFirst('{count}', (transactions.length - 3).toString()),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500], fontStyle: FontStyle.italic),
                     ),
                   ),
                 if (index < sortedKeys.length - 1) const SizedBox(height: 8),
@@ -134,21 +108,14 @@ class RecentTransactions extends StatelessWidget {
     );
   }
 
-  String _formatDate(String dateKey) {
+  String _formatDate(String dateKey, AppLocalizations localizations) {
     final parts = dateKey.split('-');
-    final date = DateTime(
-      int.parse(parts[0]),
-      int.parse(parts[1]),
-      int.parse(parts[2]),
-    );
-
+    final date = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
-
-    if (date == today) return 'Today';
-    if (date == yesterday) return 'Yesterday';
-
+    if (date == today) return localizations.today;
+    if (date == yesterday) return localizations.yesterday;
     return '${date.day}/${date.month}/${date.year}';
   }
 }

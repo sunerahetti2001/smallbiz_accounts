@@ -213,6 +213,15 @@ class AppLocalizations {
   String get closingBalance => translate('closing_balance');
   String get profitMargin => translate('profit_margin');
   String get incomeVsExpense => translate('income_vs_expense');
+  String get noAccountFound => translate('no_account_found');
+  String get noTransactionsYet => translate('no_transactions_yet');
+  String get tapToAddFirst => translate('tap_to_add_first');
+  String get due => translate('due');
+  String get pleaseEnterCustomerName => translate('please_enter_customer_name');
+  String get pleaseFillItemDetails => translate('please_fill_item_details');
+  String get pleaseEnterValidPriceQuantity => translate('please_enter_valid_price_quantity');
+  String get overduePayment => translate('overdue_payment');
+  String get paymentDueTomorrow => translate('payment_due_tomorrow');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

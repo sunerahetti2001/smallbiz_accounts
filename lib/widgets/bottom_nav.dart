@@ -15,6 +15,8 @@ class BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
 
     return Container(
       decoration: BoxDecoration(
@@ -29,7 +31,7 @@ class BottomNav extends StatelessWidget {
       ),
       child: SafeArea(
         child: SizedBox(
-          height: 80,
+          height: isSmallScreen ? 65 : 80,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -38,30 +40,35 @@ class BottomNav extends StatelessWidget {
                 activeIcon: Icons.home,
                 label: localizations.home,
                 index: 0,
+                isSmallScreen: isSmallScreen,
               ),
               _buildNavItem(
                 icon: Icons.category_outlined,
                 activeIcon: Icons.category,
                 label: localizations.categories,
                 index: 1,
+                isSmallScreen: isSmallScreen,
               ),
               _buildNavItem(
                 icon: Icons.compare_arrows_outlined,
                 activeIcon: Icons.compare_arrows,
                 label: localizations.compare,
                 index: 2,
+                isSmallScreen: isSmallScreen,
               ),
               _buildNavItem(
                 icon: Icons.timeline_outlined,
                 activeIcon: Icons.timeline,
                 label: localizations.analysis,
                 index: 3,
+                isSmallScreen: isSmallScreen,
               ),
               _buildNavItem(
                 icon: Icons.description_outlined,
                 activeIcon: Icons.description,
                 label: localizations.statements,
                 index: 4,
+                isSmallScreen: isSmallScreen,
               ),
             ],
           ),
@@ -75,18 +82,22 @@ class BottomNav extends StatelessWidget {
     required IconData activeIcon,
     required String label,
     required int index,
+    required bool isSmallScreen,
   }) {
     final isSelected = currentIndex == index;
 
     return GestureDetector(
       onTap: () => onTap(index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 4 : 8,
+          vertical: isSmallScreen ? 4 : 8,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
@@ -94,16 +105,20 @@ class BottomNav extends StatelessWidget {
               child: Icon(
                 isSelected ? activeIcon : icon,
                 color: isSelected ? AppColors.primary : AppColors.textTertiary,
-                size: 24,
+                size: isSmallScreen ? 20 : 24,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? AppColors.primary : AppColors.textTertiary,
+            SizedBox(height: isSmallScreen ? 2 : 4),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 9 : 10,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  color: isSelected ? AppColors.primary : AppColors.textTertiary,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],

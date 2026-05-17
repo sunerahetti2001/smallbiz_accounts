@@ -14,6 +14,8 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final localizations = AppLocalizations.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
 
     return Scaffold(
       body: SafeArea(
@@ -30,46 +32,46 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(isSmallScreen ? 16.0 : 24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Align(
                   alignment: Alignment.topRight,
-                  child: _buildLanguageSelector(context, localizations),
+                  child: _buildLanguageSelector(context, localizations, isSmallScreen),
                 ),
                 const Spacer(flex: 1),
                 Center(
                   child: Container(
-                    width: 100,
-                    height: 100,
+                    width: isSmallScreen ? 80 : 100,
+                    height: isSmallScreen ? 80 : 100,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: Colors.white.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.account_balance,
-                      size: 50,
+                      size: isSmallScreen ? 40 : 50,
                       color: Colors.white,
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: isSmallScreen ? 20 : 32),
                 Text(
                   localizations.appName,
-                  style: const TextStyle(
-                    fontSize: 32,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 26 : 32,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                     height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: isSmallScreen ? 10 : 16),
                 Text(
                   localizations.welcomeMessage,
                   style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: isSmallScreen ? 14 : 16,
+                    color: Colors.white.withOpacity(0.8),
                     height: 1.5,
                   ),
                 ),
@@ -78,7 +80,6 @@ class WelcomeScreen extends StatelessWidget {
                   const Center(child: CircularProgressIndicator(color: Colors.white))
                 else ...[
                   _buildButton(
-                    context: context,
                     text: localizations.login,
                     onPressed: () {
                       Navigator.push(
@@ -88,10 +89,10 @@ class WelcomeScreen extends StatelessWidget {
                     },
                     color: Colors.white,
                     textColor: AppColors.primary,
+                    isSmallScreen: isSmallScreen,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: isSmallScreen ? 10 : 16),
                   _buildButton(
-                    context: context,
                     text: localizations.signUp,
                     onPressed: () {
                       Navigator.push(
@@ -102,12 +103,12 @@ class WelcomeScreen extends StatelessWidget {
                     color: Colors.transparent,
                     textColor: Colors.white,
                     isOutlined: true,
+                    isSmallScreen: isSmallScreen,
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: isSmallScreen ? 16 : 24),
                   Center(
                     child: TextButton(
                       onPressed: () {
-                        // Guest mode - go directly to BasicInfoScreen
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -118,16 +119,16 @@ class WelcomeScreen extends StatelessWidget {
                       child: Text(
                         localizations.guestMode,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: Colors.white.withOpacity(0.7),
                           fontWeight: FontWeight.normal,
-                          fontSize: 14,
+                          fontSize: isSmallScreen ? 12 : 14,
                           decoration: TextDecoration.underline,
                         ),
                       ),
                     ),
                   ),
                 ],
-                const SizedBox(height: 24),
+                SizedBox(height: isSmallScreen ? 12 : 24),
               ],
             ),
           ),
@@ -136,34 +137,37 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLanguageSelector(BuildContext context, AppLocalizations localizations) {
+  Widget _buildLanguageSelector(BuildContext context, AppLocalizations localizations, bool isSmallScreen) {
     final languageProvider = Provider.of<LanguageProvider>(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
+        color: Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(25),
       ),
       child: InkWell(
         onTap: () => _showLanguageDialog(context, localizations, languageProvider),
         borderRadius: BorderRadius.circular(25),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 10 : 16,
+            vertical: isSmallScreen ? 6 : 10,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.language, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
+              Icon(Icons.language, color: Colors.white, size: isSmallScreen ? 16 : 20),
+              SizedBox(width: isSmallScreen ? 4 : 8),
               Text(
                 languageProvider.isSinhala ? 'සිංහල' : 'English',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 14,
+                  fontSize: isSmallScreen ? 12 : 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(width: 4),
-              const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+              SizedBox(width: isSmallScreen ? 2 : 4),
+              Icon(Icons.arrow_drop_down, color: Colors.white, size: isSmallScreen ? 16 : 20),
             ],
           ),
         ),
@@ -225,16 +229,16 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   Widget _buildButton({
-    required BuildContext context,
     required String text,
     required VoidCallback onPressed,
     required Color color,
     required Color textColor,
     bool isOutlined = false,
+    required bool isSmallScreen,
   }) {
     return SizedBox(
       width: double.infinity,
-      height: 56,
+      height: isSmallScreen ? 48 : 56,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -248,7 +252,7 @@ class WelcomeScreen extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: isSmallScreen ? 14 : 16, fontWeight: FontWeight.bold),
         ),
       ),
     );

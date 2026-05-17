@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/colors.dart';
-import '../home/home_screen.dart';
-import 'basic_info_screen.dart';
 
 class EmailAuthScreen extends StatefulWidget {
   final bool isLogin;
@@ -29,40 +27,48 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
+
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final localizations = AppLocalizations.of(context);
 
     try {
       if (_isLogin) {
-        // LOGIN flow
-        await userProvider.signInWithEmail(
+        final hasRecord = await userProvider.signInWithEmail(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
-        _handlePostAuth(userProvider);
+        if (!mounted) return;
+        if (!hasRecord) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(localizations.noAccountFound),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        // If true, the StreamBuilder will navigate automatically
       } else {
-        // SIGN UP flow
         await userProvider.signUpWithEmail(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
-        _handlePostAuth(userProvider);
+        // StreamBuilder will pick up the new user → BasicInfoScreen
       }
     } catch (e) {
-      if (mounted) {
-        String errorMessage = e.toString();
-        if (errorMessage.contains('] ')) {
-          errorMessage = errorMessage.split('] ').last;
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+      if (!mounted) return;
+      String message = e.toString();
+      if (message.contains('] ')) {
+        message = message.split('] ').last;
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -70,65 +76,34 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
 
   Future<void> _continueWithGoogle() async {
     setState(() => _isLoading = true);
+
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final localizations = AppLocalizations.of(context);
 
     try {
-      await userProvider.signInWithGoogle();
-
+      final hasRecord = await userProvider.signInWithGoogle();
       if (!mounted) return;
-
-      debugPrint('EmailAuthScreen: Google auth complete. isOnboarded=${userProvider.isOnboarded}, needsOnboarding=${userProvider.needsOnboarding}');
-
-      _handlePostAuth(userProvider);
-    } catch (e) {
-      if (mounted) {
-        debugPrint('Google Sign In error: $e');
+      if (!hasRecord) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Google Sign In failed. Please try again.'),
-            backgroundColor: AppColors.error,
+            content: Text(localizations.noAccountFound),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Google Sign In failed. Please try again.'),
+          backgroundColor: AppColors.error,
+          duration: Duration(seconds: 4),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _handlePostAuth(UserProvider userProvider) {
-    debugPrint('_handlePostAuth: isLogin=$_isLogin, isOnboarded=${userProvider.isOnboarded}, needsOnboarding=${userProvider.needsOnboarding}, isGuest=${userProvider.isGuest}');
-
-    if (_isLogin) {
-      // LOGIN: If user exists in SQLite -> Home, else -> Onboarding
-      if (userProvider.isOnboarded) {
-        debugPrint('Login: User onboarded -> HomeScreen');
-        _navigateToHome();
-      } else if (userProvider.needsOnboarding) {
-        debugPrint('Login: User needs onboarding -> BasicInfoScreen');
-        _navigateToOnboarding();
-      } else {
-        // No change - stay on screen
-        debugPrint('Login: No state change');
-      }
-    } else {
-      // SIGN UP: Always go to onboarding
-      debugPrint('SignUp: Going to onboarding');
-      _navigateToOnboarding();
-    }
-  }
-
-  void _navigateToHome() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-          (route) => false,
-    );
-  }
-
-  void _navigateToOnboarding() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const BasicInfoScreen()),
-          (route) => false,
-    );
   }
 
   @override
@@ -204,13 +179,39 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                _buildGoogleButton(localizations),
+                OutlinedButton(
+                  onPressed: _isLoading ? null : _continueWithGoogle,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    side: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF4285F4), width: 2),
+                        ),
+                        child: const Center(
+                          child: Text('G', style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold, fontSize: 14)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _isLogin ? localizations.continueWithGoogle : localizations.signUpWithGoogle,
+                        style: const TextStyle(color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 30),
                 TextButton(
                   onPressed: () {
-                    setState(() {
-                      _isLogin = !_isLogin;
-                    });
+                    setState(() => _isLogin = !_isLogin);
                   },
                   child: Text(_isLogin ? localizations.dontHaveAccount : localizations.alreadyHaveAccount),
                 ),
@@ -218,43 +219,6 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildGoogleButton(AppLocalizations localizations) {
-    return OutlinedButton(
-      onPressed: _isLoading ? null : _continueWithGoogle,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(double.infinity, 56),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        side: BorderSide(color: Colors.grey[300]!),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            'assets/icons/google_logo.png',
-            width: 24,
-            height: 24,
-            errorBuilder: (context, error, stackTrace) => Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFF4285F4), width: 2),
-              ),
-              child: const Center(
-                child: Text('G', style: TextStyle(color: Color(0xFF4285F4), fontWeight: FontWeight.bold, fontSize: 14)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            _isLogin ? localizations.continueWithGoogle : localizations.signUpWithGoogle,
-            style: const TextStyle(color: Colors.black87),
-          ),
-        ],
       ),
     );
   }

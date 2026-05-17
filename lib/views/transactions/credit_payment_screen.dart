@@ -36,6 +36,7 @@ class _CreditPaymentScreenState extends State<CreditPaymentScreen> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
     await transactionProvider.loadTransactions(userProvider.user!.id);
+    if (!mounted) return;
     setState(() {});
   }
 
@@ -148,8 +149,15 @@ class _CreditPaymentScreenState extends State<CreditPaymentScreen> {
           customerName: _selectedCredit!.customerName,
         );
         await Provider.of<TransactionProvider>(context, listen: false).addTransaction(payment, userId);
-        if (mounted) Navigator.pop(context, true);
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${localizations.creditPayment} ${localizations.save} ${localizations.success}'), backgroundColor: AppColors.success),
+        );
+        Navigator.pop(context, true);
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${localizations.error}: $e')));
       } finally {
         if (mounted) setState(() => _isLoading = false);

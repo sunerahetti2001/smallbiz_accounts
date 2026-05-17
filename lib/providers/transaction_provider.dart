@@ -41,15 +41,15 @@ class TransactionProvider with ChangeNotifier {
       final user = await _sqlite.getUser(id: userId);
       double balance = user?.openingBalance ?? 0;
 
-      double credit = 0;
       double todayIncome = 0;
       double todayExpense = 0;
       double todayCredit = 0;
 
       final today = DateTime.now();
 
+      // First pass: compute cash balance and today's income/expense
       for (var t in _transactions) {
-        bool isToday = t.date.year == today.year &&
+        final bool isToday = t.date.year == today.year &&
             t.date.month == today.month &&
             t.date.day == today.day;
 
@@ -61,13 +61,31 @@ class TransactionProvider with ChangeNotifier {
           if (isToday) todayExpense += t.amount;
         } else if (t.type == TransactionType.creditPayment) {
           balance += t.amount;
-          if (isToday) todayIncome += t.amount;
+          if (isToday) todayIncome += t.amount;   // payments count as income today
         } else if (t.type == TransactionType.creditSale) {
-          if (!t.isPaid) {
-            credit += t.amount;
-            if (isToday) todayCredit += t.amount;
+          if (!t.isPaid && isToday) {
+            todayCredit += t.amount;   // new credits issued today
           }
         }
+      }
+
+      // Second pass: compute net credit outstanding per customer
+      Map<String, double> creditByCustomer = {};
+      Map<String, double> paymentByCustomer = {};
+      for (var t in _transactions) {
+        final customer = t.customerName ?? '';
+        if (t.type == TransactionType.creditSale && !t.isPaid) {
+          creditByCustomer[customer] = (creditByCustomer[customer] ?? 0) + t.amount;
+        } else if (t.type == TransactionType.creditPayment) {
+          paymentByCustomer[customer] = (paymentByCustomer[customer] ?? 0) + t.amount;
+        }
+      }
+
+      double credit = 0;
+      for (var customer in creditByCustomer.keys) {
+        double totalCredit = creditByCustomer[customer] ?? 0;
+        double totalPayments = paymentByCustomer[customer] ?? 0;
+        credit += (totalCredit - totalPayments).clamp(0.0, totalCredit);
       }
 
       _currentBalance = balance;

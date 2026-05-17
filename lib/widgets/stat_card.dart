@@ -20,11 +20,14 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
     return Container(
-      padding: EdgeInsets.all(isCompact ? 12 : 16),
+      padding: EdgeInsets.all(isCompact || isSmallScreen ? 10 : 16),
       decoration: BoxDecoration(
         color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
+        borderRadius: BorderRadius.circular(isCompact || isSmallScreen ? 14 : 20),
         border: Border.all(color: color.withOpacity(0.1)),
       ),
       child: Column(
@@ -33,30 +36,37 @@ class StatCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                 ),
-                child: Icon(icon, color: color, size: isCompact ? 18 : 20),
+                child: Icon(icon, color: color, size: isCompact || isSmallScreen ? 16 : 20),
               ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: isCompact ? 11 : 12,
-                  color: AppColors.textSecondary,
+              SizedBox(width: isSmallScreen ? 4 : 8),
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: isCompact || isSmallScreen ? 10 : 12,
+                    color: AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            CurrencyFormatter.formatCompact(value),
-            style: TextStyle(
-              fontSize: isCompact ? 18 : 20,
-              fontWeight: FontWeight.bold,
-              color: color,
+          SizedBox(height: isSmallScreen ? 4 : 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              CurrencyFormatter.formatCompact(value),
+              style: TextStyle(
+                fontSize: isCompact || isSmallScreen ? 16 : 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
         ],
