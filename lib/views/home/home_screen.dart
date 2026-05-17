@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/language_provider.dart';
 import '../../utils/colors.dart';
 import '../../utils/currency_formatter.dart';
+import '../../services/notification_service.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/transaction_item.dart';
@@ -97,8 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    transactionProvider;
-
     final screens = [
       _buildHomeScreen(userProvider, transactionProvider),
       const CategoriesScreen(),
@@ -140,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickActionsMenu() {
     final localizations = AppLocalizations.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
 
     final actions = [
       {'label': localizations.income, 'path': 'income', 'icon': Icons.trending_up, 'color': AppColors.income},
@@ -150,15 +150,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(screenWidth < 360 ? 8 : 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 20)],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20)],
       ),
       child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
+        spacing: screenWidth < 360 ? 6 : 12,
+        runSpacing: screenWidth < 360 ? 6 : 12,
         alignment: WrapAlignment.center,
         children: actions.map((action) {
           return GestureDetector(
@@ -170,18 +170,31 @@ class _HomeScreenState extends State<HomeScreen> {
               ).then((_) => _loadData());
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth < 360 ? 10 : 16,
+                vertical: screenWidth < 360 ? 8 : 12,
+              ),
               decoration: BoxDecoration(
-                color: (action['color'] as Color).withValues(alpha: 0.1),
+                color: (action['color'] as Color).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: (action['color'] as Color).withValues(alpha: 0.3)),
+                border: Border.all(color: (action['color'] as Color).withOpacity(0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(action['icon'] as IconData, color: action['color'] as Color, size: 18),
-                  const SizedBox(width: 8),
-                  Text(action['label'] as String, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: action['color'] as Color)),
+                  Icon(action['icon'] as IconData, color: action['color'] as Color, size: screenWidth < 360 ? 16 : 18),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      action['label'] as String,
+                      style: TextStyle(
+                        fontSize: screenWidth < 360 ? 11 : 13,
+                        fontWeight: FontWeight.w600,
+                        color: action['color'] as Color,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -217,6 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _buildHeader(user, localizations),
             if (userProvider.isGuest) _buildGuestReminder(context, localizations),
+            _buildCreditNotifications(transactionProvider),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -231,12 +245,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
                   _buildBalanceCard(transactionProvider, localizations),
-
                   if (pendingCredits.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     _buildPendingCreditsSection(pendingCredits, localizations),
                   ],
-
                   const SizedBox(height: 24),
                   _buildRecentTransactions(transactionProvider, localizations),
                 ],
@@ -248,14 +260,83 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildCreditNotifications(TransactionProvider transactionProvider) {
+    final localizations = AppLocalizations.of(context);
+    final notificationService = NotificationService();
+    notificationService.checkCreditReminders(transactionProvider.transactions);
+    final pendingNotifications = notificationService.notifications
+        .where((n) => !(n['isDismissed'] as bool))
+        .toList();
+
+    if (pendingNotifications.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Column(
+        children: pendingNotifications.take(3).map((notification) {
+          final isOverdue = notification['isOverdue'] as bool;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isOverdue ? Colors.red.shade50 : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isOverdue ? Colors.red.shade200 : Colors.orange.shade200,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isOverdue ? Icons.warning : Icons.info_outline,
+                  color: isOverdue ? Colors.red : Colors.orange,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isOverdue ? localizations.overduePayment : localizations.paymentDueTomorrow,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: isOverdue ? Colors.red : Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${notification['customerName']} - Rs ${(notification['amount'] as double).toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  onPressed: () {
+                    setState(() {
+                      notificationService.dismissNotification(notification['id'] as int);
+                    });
+                  },
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildGuestReminder(BuildContext context, AppLocalizations localizations) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.amber.withValues(alpha: 0.1),
+        color: Colors.amber.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+        border: Border.all(color: Colors.amber.withOpacity(0.5)),
       ),
       child: Row(
         children: [
@@ -264,21 +345,19 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: Text(
               localizations.guestWarning,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
             ),
           ),
           TextButton(
             onPressed: () {
-              // Navigate to sign up page for guest users to connect
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const EmailAuthScreen(isLogin: false)),
               ).then((_) {
-                // Refresh data after returning from auth
                 _loadData();
               });
             },
-            child: Text(localizations.connect, style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(localizations.connect, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ],
       ),
@@ -286,6 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader(dynamic user, AppLocalizations localizations) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -293,24 +374,48 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.only(bottomLeft: Radius.circular(48), bottomRight: Radius.circular(48)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 48, 20, 32),
+        padding: EdgeInsets.fromLTRB(20, screenWidth < 360 ? 36 : 48, 20, screenWidth < 360 ? 24 : 32),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(localizations.welcomeBack, style: const TextStyle(fontSize: 14, color: Colors.white70)),
-                Text('${localizations.hi} ${user.name}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                Text(user.businessName, style: const TextStyle(fontSize: 12, color: Colors.white70)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(localizations.welcomeBack, style: TextStyle(fontSize: screenWidth < 360 ? 12 : 14, color: Colors.white70)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${localizations.hi} ${user.name}',
+                    style: TextStyle(
+                      fontSize: screenWidth < 360 ? 20 : 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  Text(
+                    user.businessName,
+                    style: TextStyle(fontSize: screenWidth < 360 ? 10 : 12, color: Colors.white70),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(width: 12),
             GestureDetector(
               onTap: _showProfileSheet,
               child: CircleAvatar(
-                radius: 28,
+                radius: screenWidth < 360 ? 24 : 28,
                 backgroundColor: Colors.white,
-                child: Text(user.name[0].toUpperCase(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A4D8C))),
+                child: Text(
+                  user.name[0].toUpperCase(),
+                  style: TextStyle(
+                    fontSize: screenWidth < 360 ? 20 : 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1A4D8C),
+                  ),
+                ),
               ),
             ),
           ],
@@ -320,8 +425,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBalanceCard(TransactionProvider provider, AppLocalizations localizations) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(screenWidth < 360 ? 14 : 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [Color(0xFF1A4D8C), Color(0xFF1E3A8A)]),
         borderRadius: BorderRadius.circular(24),
@@ -329,15 +436,45 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(localizations.availableBalance, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          Text(
+            localizations.availableBalance,
+            style: TextStyle(color: Colors.white70, fontSize: screenWidth < 360 ? 12 : 14),
+          ),
           const SizedBox(height: 8),
-          Text('Rs ${provider.currentBalance.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 20),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Rs ${provider.currentBalance.toStringAsFixed(2)}',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: screenWidth < 360 ? 26 : 32,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
-              Text('${localizations.creditOutstanding}:', style: const TextStyle(color: Colors.white70)),
+              Flexible(
+                child: Text(
+                  '${localizations.creditOutstanding}:',
+                  style: TextStyle(color: Colors.white70, fontSize: screenWidth < 360 ? 11 : 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               const SizedBox(width: 8),
-              Text('Rs ${provider.creditOutstanding.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Flexible(
+                child: Text(
+                  'Rs ${provider.creditOutstanding.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: screenWidth < 360 ? 12 : 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ],
@@ -346,16 +483,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPendingCreditsSection(List<TransactionModel> credits, AppLocalizations localizations) {
+    // Get all transactions to compute payments received per customer
+    final allTransactions = Provider.of<TransactionProvider>(context, listen: false).transactions;
+
+    // Total payments per customer
+    final Map<String, double> paymentsByCustomer = {};
+    for (var t in allTransactions) {
+      if (t.type == TransactionType.creditPayment && t.customerName != null) {
+        paymentsByCustomer[t.customerName!] = (paymentsByCustomer[t.customerName!] ?? 0) + t.amount;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(localizations.pendingPayments, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(localizations.pendingPayments, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             TextButton(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreditPaymentScreen())),
-              child: Text(localizations.viewAll),
+              child: Text(localizations.viewAll, style: const TextStyle(fontSize: 12)),
             ),
           ],
         ),
@@ -369,23 +517,45 @@ class _HomeScreenState extends State<HomeScreen> {
               final credit = credits[index];
               final bool isOverdue = credit.dueDate != null && credit.dueDate!.isBefore(DateTime.now());
 
+              // Calculate remaining amount for this customer
+              final double totalPayments = paymentsByCustomer[credit.customerName] ?? 0;
+              final double remaining = (credit.amount - totalPayments).clamp(0.0, credit.amount);
+
               return Container(
-                width: 200,
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.all(16),
+                width: 180,
+                margin: const EdgeInsets.only(right: 10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isOverdue ? Colors.red.withValues(alpha: 0.05) : Colors.white,
+                  color: isOverdue ? Colors.red.withOpacity(0.05) : Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isOverdue ? Colors.red.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.2)),
+                  border: Border.all(
+                    color: isOverdue ? Colors.red.withOpacity(0.3) : Colors.grey.withOpacity(0.2),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(credit.customerName ?? localizations.selectCustomer, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(
+                      credit.customerName ?? localizations.selectCustomer,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const Spacer(),
-                    Text('Rs ${credit.amount.toStringAsFixed(2)}', style: TextStyle(color: isOverdue ? Colors.red : AppColors.credit, fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(
+                      'Rs ${remaining.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: isOverdue ? Colors.red : AppColors.credit,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
                     if (credit.dueDate != null)
-                      Text('${localizations.dueDate}: ${credit.dueDate!.day}/${credit.dueDate!.month}', style: TextStyle(fontSize: 11, color: isOverdue ? Colors.red : Colors.grey)),
+                      Text(
+                        '${localizations.dueDate}: ${credit.dueDate!.day}/${credit.dueDate!.month}',
+                        style: TextStyle(fontSize: 10, color: isOverdue ? Colors.red : Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                   ],
                 ),
               );
@@ -401,17 +571,18 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(localizations.recentActivity, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(localizations.recentActivity, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         if (recent.isEmpty)
           Padding(
             padding: const EdgeInsets.all(16),
             child: Center(child: Text(localizations.noTransactions, style: const TextStyle(color: Colors.grey))),
           )
-        else ...recent.map((t) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: TransactionItem(transaction: t),
-        )),
+        else
+          ...recent.map((t) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TransactionItem(transaction: t),
+          )),
       ],
     );
   }
@@ -484,7 +655,6 @@ class ProfileBottomSheet extends StatelessWidget {
               subtitle: const Text('Save your data to the cloud'),
               onTap: () {
                 Navigator.pop(context);
-                // Navigate to sign up for guest users
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const EmailAuthScreen(isLogin: false)),

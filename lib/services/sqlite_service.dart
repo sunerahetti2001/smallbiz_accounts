@@ -226,38 +226,28 @@ class SqliteService {
   Future<void> insertTransaction(TransactionModel transaction, String userId) async {
     final db = await database;
 
-    // Handle credit payment logic - update the corresponding credit sale
+    // Handle credit payment – do not reduce the credit sale amount
     if (transaction.type == TransactionType.creditPayment && transaction.customerName != null) {
       final List<Map<String, dynamic>> pendingSales = await db.query(
         'transactions',
         where: 'user_id = ? AND type = ? AND customer_name = ? AND is_paid = 0',
         whereArgs: [userId, 'creditSale', transaction.customerName],
+        orderBy: 'date ASC',
       );
 
       if (pendingSales.isNotEmpty) {
         final sale = pendingSales.first;
-        final currentAmount = sale['amount'] is int
-            ? (sale['amount'] as int).toDouble()
-            : sale['amount'];
-        final newAmount = currentAmount - transaction.amount;
-
-        if (newAmount <= 0.01) {
-          // Full payment - mark as paid
+        final double saleAmount = (sale['amount'] as num).toDouble();
+        if (transaction.amount >= saleAmount) {
+          // Full payment – mark the sale as paid
           await db.update(
             'transactions',
             {'is_paid': 1},
             where: 'id = ?',
             whereArgs: [sale['id']],
           );
-        } else {
-          // Partial payment - update remaining amount
-          await db.update(
-            'transactions',
-            {'amount': newAmount},
-            where: 'id = ?',
-            whereArgs: [sale['id']],
-          );
         }
+        // Partial payment: do not modify the credit sale amount
       }
     }
 
@@ -388,12 +378,23 @@ class SqliteService {
 
   Future<double> getTotalCreditOutstanding(String userId) async {
     final transactions = await getTransactions(userId);
-    double total = 0;
+    Map<String, double> creditByCustomer = {};
+    Map<String, double> paymentByCustomer = {};
 
     for (var t in transactions) {
+      final customer = t.customerName ?? '';
       if (t.type == TransactionType.creditSale && !t.isPaid) {
-        total += t.amount;
+        creditByCustomer[customer] = (creditByCustomer[customer] ?? 0) + t.amount;
+      } else if (t.type == TransactionType.creditPayment) {
+        paymentByCustomer[customer] = (paymentByCustomer[customer] ?? 0) + t.amount;
       }
+    }
+
+    double total = 0;
+    for (var customer in creditByCustomer.keys) {
+      double totalCredit = creditByCustomer[customer] ?? 0;
+      double totalPayments = paymentByCustomer[customer] ?? 0;
+      total += (totalCredit - totalPayments).clamp(0.0, totalCredit);
     }
     return total;
   }

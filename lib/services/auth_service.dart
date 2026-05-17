@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -81,6 +82,13 @@ class AuthService {
     } catch (e) {
       debugPrint("Error signing out: $e");
     }
+  }
+
+  /// Clear any auth state and set guest mode flag (no navigation)
+  Future<void> enterGuestMode() async {
+    await signOut();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isGuest', true);
   }
 
   User? get currentUser => _auth.currentUser;

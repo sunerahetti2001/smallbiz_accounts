@@ -85,34 +85,63 @@ assets/lang/
 lib/
 ├── main.dart
 ├── l10n/
-│   ├── app_localizations.dart    # Localization delegate
-│   └── language_provider.dart    # Language state management
+│   ├── app_localizations.dart
+│   └── language_provider.dart
 ├── models/
 │   ├── user_model.dart
 │   ├── transaction_model.dart
-│   ├── business_model.dart
 │   └── category_model.dart
 ├── providers/
-│   ├── user_provider.dart        # Auth & user state
-│   ├── transaction_provider.dart # Transaction state & summaries
-│   └── category_provider.dart    # Category management
+│   ├── user_provider.dart
+│   ├── transaction_provider.dart
+│   └── category_provider.dart
 ├── services/
-│   ├── auth_service.dart         # Firebase authentication
-│   ├── sqlite_service.dart       # Local database operations
-│   └── pdf_export_service.dart   # PDF generation
+│   ├── auth_service.dart
+│   ├── sqlite_service.dart
+│   ├── pdf_export_service.dart
+│   └── notification_service.dart
 ├── utils/
-│   ├── colors.dart               # App color palette
-│   ├── constants.dart            # App constants & defaults
-│   ├── theme.dart                # Material 3 theme
-│   └── currency_formatter.dart   # LKR currency formatting
+│   ├── colors.dart
+│   ├── constants.dart
+│   ├── theme.dart
+│   └── currency_formatter.dart
 ├── views/
-│   ├── onboarding/               # Welcome, auth, setup screens
-│   ├── home/                     # Dashboard & widgets
-│   ├── transactions/             # Income, expense, credit screens
-│   ├── categories/               # Category management
-│   ├── reports/                  # Comparison, analysis, statements
-│   └── profile/                  # User profile & settings
-└── widgets/                      # Reusable UI components
+│   ├── auth_gate.dart
+│   ├── onboarding/
+│   │   ├── welcome_screen.dart
+│   │   ├── basic_info_screen.dart
+│   │   ├── email_auth_screen.dart
+│   │   ├── opening_balance_screen.dart
+│   │   └── business_name_screen.dart
+│   ├── home/
+│   │   ├── home_screen.dart
+│   │   └── widgets/
+│   │       └── recent_transactions.dart
+│   ├── transactions/
+│   │   ├── transaction_type_screen.dart
+│   │   ├── add_transaction_screen.dart
+│   │   ├── income_screen.dart
+│   │   ├── expense_screen.dart
+│   │   ├── credit_sale_screen.dart
+│   │   └── credit_payment_screen.dart
+│   ├── categories/
+│   │   ├── categories_screen.dart
+│   │   ├── add_category_screen.dart
+│   │   └── edit_category_screen.dart
+│   ├── reports/
+│   │   ├── comparison_screen.dart
+│   │   ├── three_month_analysis_screen.dart
+│   │   └── monthly_statements_screen.dart
+│   └── profile/
+│       └── profile_screen.dart
+└── widgets/
+    ├── bottom_nav.dart
+    ├── custom_button.dart
+    ├── gradient_background.dart
+    ├── stat_card.dart
+    ├── transaction_item.dart
+    ├── custom_textfield.dart
+    └── category_chip.dart
 ```
 ## 📄 License
 

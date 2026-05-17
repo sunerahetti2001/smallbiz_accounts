@@ -36,9 +36,12 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
 
   Future<void> _loadCategories() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.user == null) return;
     final userId = userProvider.user!.id;
     final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
     await categoryProvider.loadCategories(userId);
+
+    if (!mounted) return;
 
     if (categoryProvider.expenseCategories.isNotEmpty) {
       setState(() {
@@ -152,8 +155,15 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
           paymentMethod: _selectedPaymentMethod,
         );
         await Provider.of<TransactionProvider>(context, listen: false).addTransaction(transaction, userId);
-        if (mounted) Navigator.pop(context, true);
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${localizations.expense} ${localizations.save} ${localizations.success}'), backgroundColor: AppColors.success),
+        );
+        Navigator.pop(context, true);
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${localizations.error}: $e'), backgroundColor: AppColors.error));
       } finally {
         if (mounted) setState(() => _isLoading = false);

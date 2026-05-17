@@ -184,5 +184,14 @@
   "total_expense": "මුළු වියදම",
   "closing_balance": "අවසන් ශේෂය",
   "profit_margin": "ලාභ ආන්තිකය",
-  "income_vs_expense": "ආදායම් සහ වියදම්"
+  "income_vs_expense": "ආදායම් සහ වියදම්",
+  "no_account_found": "ගිණුමක් හමු නොවිණි. කරුණාකර පළමුව ලියාපදිංචි වන්න.",
+  "no_transactions_yet": "තවමත් ගනුදෙනු නොමැත",
+  "tap_to_add_first": "ඔබේ පළමු ගනුදෙනුව එක් කිරීමට + තට්ටු කරන්න",
+  "due": "ගෙවිය යුතු",
+  "please_enter_customer_name": "කරුණාකර පාරිභෝගික නම ඇතුළත් කරන්න",
+  "please_fill_item_details": "කරුණාකර සියලුම අයිතම විස්තර පුරවන්න",
+  "please_enter_valid_price_quantity": "කරුණාකර වලංගු මිල සහ ප්‍රමාණය ඇතුළත් කරන්න",
+  "overdue_payment": "කල් ඉකුත් වූ ගෙවීම!",
+  "payment_due_tomorrow": "හෙට ගෙවීමට නියමිතයි"
 }

@@ -184,5 +184,14 @@
   "total_expense": "Total Expense",
   "closing_balance": "Closing Balance",
   "profit_margin": "Profit Margin",
-  "income_vs_expense": "Income vs Expense"
+  "income_vs_expense": "Income vs Expense",
+  "no_account_found": "No account found. Please sign up first.",
+  "no_transactions_yet": "No transactions yet",
+  "tap_to_add_first": "Tap + to add your first transaction",
+  "due": "Due",
+  "please_enter_customer_name": "Please enter customer name",
+  "please_fill_item_details": "Please fill in all item details",
+  "please_enter_valid_price_quantity": "Please enter valid price and quantity",
+  "overdue_payment": "Overdue Payment!",
+  "payment_due_tomorrow": "Payment Due Tomorrow"
 }
