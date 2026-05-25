@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/transaction_model.dart';
 import '../services/sqlite_service.dart';
+import '../services/backup_service.dart';
 
 class TransactionProvider with ChangeNotifier {
   List<TransactionModel> _transactions = [];
@@ -47,7 +50,6 @@ class TransactionProvider with ChangeNotifier {
 
       final today = DateTime.now();
 
-      // First pass: compute cash balance and today's income/expense
       for (var t in _transactions) {
         final bool isToday = t.date.year == today.year &&
             t.date.month == today.month &&
@@ -61,15 +63,15 @@ class TransactionProvider with ChangeNotifier {
           if (isToday) todayExpense += t.amount;
         } else if (t.type == TransactionType.creditPayment) {
           balance += t.amount;
-          if (isToday) todayIncome += t.amount;   // payments count as income today
+          if (isToday) todayIncome += t.amount;
         } else if (t.type == TransactionType.creditSale) {
           if (!t.isPaid && isToday) {
-            todayCredit += t.amount;   // new credits issued today
+            todayCredit += t.amount;
           }
         }
       }
 
-      // Second pass: compute net credit outstanding per customer
+      // Net credit outstanding per customer
       Map<String, double> creditByCustomer = {};
       Map<String, double> paymentByCustomer = {};
       for (var t in _transactions) {
@@ -104,6 +106,18 @@ class TransactionProvider with ChangeNotifier {
     debugPrint('TransactionProvider: Adding transaction for user $userId');
     await _sqlite.insertTransaction(transaction, userId);
     await loadTransactions(userId);
+
+    // Backup single transaction if user is signed in and online
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser != null && userId == auth.currentUser!.uid) {
+      final connectivity = await Connectivity().checkConnectivity();
+      if (connectivity != ConnectivityResult.none) {
+        final backupService = BackupService();
+        if (await backupService.isAutoBackupEnabled()) {
+          await backupService.backupSingleTransaction(transaction);
+        }
+      }
+    }
   }
 
   List<TransactionModel> getRecentTransactions({int limit = 10}) {
@@ -135,7 +149,6 @@ class TransactionProvider with ChangeNotifier {
     return grouped;
   }
 
-  // Clear data (useful for logout)
   void clear() {
     _transactions = [];
     _currentBalance = 0;

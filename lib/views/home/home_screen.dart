@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../services/backup_service.dart';
 import '../../models/transaction_model.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/language_provider.dart';
@@ -60,6 +62,21 @@ class _HomeScreenState extends State<HomeScreen> {
     debugPrint('HomeScreen: Loading transactions for user ${userProvider.user!.id}');
     final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
     await transactionProvider.loadTransactions(userProvider.user!.id);
+
+    // Auto backup – fail silently if no permission or network error
+    if (!userProvider.isGuest && userProvider.user != null) {
+      try {
+        final backupService = BackupService();
+        if (await backupService.isAutoBackupEnabled()) {
+          final connectivity = await Connectivity().checkConnectivity();
+          if (connectivity != ConnectivityResult.none) {
+            await backupService.backupToCloud();
+          }
+        }
+      } catch (e) {
+        debugPrint('Auto backup failed (non‑fatal): $e');
+      }
+    }
 
     if (mounted) {
       setState(() {

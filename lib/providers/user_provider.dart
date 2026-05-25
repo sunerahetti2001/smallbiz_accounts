@@ -25,8 +25,6 @@ class UserProvider with ChangeNotifier {
 
   Future<void> loadUserByUid(String uid) async {
     _isLoading = true;
-    notifyListeners();
-
     try {
       _user = await _sqlite.getUser(id: uid);
       if (_user != null) {
@@ -39,7 +37,6 @@ class UserProvider with ChangeNotifier {
       _user = null;
     } finally {
       _isLoading = false;
-      notifyListeners();
     }
   }
 
@@ -47,7 +44,6 @@ class UserProvider with ChangeNotifier {
     _user = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_isGuestKey, false);
-    notifyListeners();
   }
 
   Future<void> loadGuestUser() async {
@@ -67,7 +63,6 @@ class UserProvider with ChangeNotifier {
       _user = null;
     } finally {
       _isLoading = false;
-      notifyListeners();
     }
   }
 

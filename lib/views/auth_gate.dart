@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/user_provider.dart';
 import '../services/sqlite_service.dart';
+import '../services/backup_service.dart';
 import '../views/onboarding/welcome_screen.dart';
 import '../views/onboarding/basic_info_screen.dart';
 import '../views/home/home_screen.dart';
@@ -48,6 +49,7 @@ class _AuthGateState extends State<AuthGate> {
                 return const Scaffold(body: Center(child: CircularProgressIndicator()));
               }
               if (existSnapshot.data!) {
+                // Existing user → load and go to Home
                 return FutureBuilder(
                   future: context.read<UserProvider>().loadUserByUid(uid),
                   builder: (context, loadSnapshot) {
@@ -58,19 +60,57 @@ class _AuthGateState extends State<AuthGate> {
                   },
                 );
               } else {
-                return FutureBuilder(
-                  future: context.read<UserProvider>().prepareForOnboarding(),
-                  builder: (context, _) {
-                    if (_.connectionState != ConnectionState.done) {
+                // New user → check for cloud backup, then decide
+                return FutureBuilder<bool>(
+                  future: () async {
+                    final backupService = BackupService();
+                    final hasBackup = await backupService.hasCloudBackup();
+                    if (hasBackup && mounted) {
+                      final shouldRestore = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Restore Data'),
+                          content: const Text('We found your backed up data. Would you like to restore it?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Skip')),
+                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
+                          ],
+                        ),
+                      );
+                      if (shouldRestore == true) {
+                        await backupService.restoreFromCloud();
+                        final userProvider = context.read<UserProvider>();
+                        await userProvider.loadUserByUid(uid);
+                        return true; // restored, go to Home
+                      }
+                    }
+                    return false;
+                  }(),
+                  builder: (context, restoreSnapshot) {
+                    if (restoreSnapshot.connectionState != ConnectionState.done) {
                       return const Scaffold(body: Center(child: CircularProgressIndicator()));
                     }
-                    return const BasicInfoScreen();
+                    final restored = restoreSnapshot.data == true;
+                    if (restored) {
+                      return const HomeScreen();
+                    }
+                    // No backup or user skipped → onboarding
+                    return FutureBuilder(
+                      future: context.read<UserProvider>().prepareForOnboarding(),
+                      builder: (context, _) {
+                        if (_.connectionState != ConnectionState.done) {
+                          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                        }
+                        return const BasicInfoScreen();
+                      },
+                    );
                   },
                 );
               }
             },
           );
         } else {
+          // No Firebase user → check guest mode
           return FutureBuilder<bool>(
             future: _isGuest(),
             builder: (context, guestSnapshot) {
