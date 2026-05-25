@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/category_model.dart';
 import '../services/sqlite_service.dart';
+import '../services/backup_service.dart';
 
 class CategoryProvider with ChangeNotifier {
   List<CategoryModel> _expenseCategories = [];
@@ -35,6 +38,18 @@ class CategoryProvider with ChangeNotifier {
 
     await _sqlite.insertCategory(category, userId);
     await loadCategories(userId);
+
+    // Backup single category if user is signed in and online
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser != null && userId == auth.currentUser!.uid) {
+      final connectivity = await Connectivity().checkConnectivity();
+      if (connectivity != ConnectivityResult.none) {
+        final backupService = BackupService();
+        if (await backupService.isAutoBackupEnabled()) {
+          await backupService.backupSingleCategory(category);
+        }
+      }
+    }
 
     _isLoading = false;
     notifyListeners();
